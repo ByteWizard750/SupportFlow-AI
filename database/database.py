@@ -2,10 +2,11 @@
 SQLite Database Layer for SupportFlow AI.
 
 Handles database initialization, connection lifecycle, and CRUD operations
-for support tickets and AI ticket analysis records.
+for support tickets, AI ticket analyses, and RAG suggested responses.
 """
 
 import os
+import json
 import sqlite3
 from contextlib import contextmanager
 from typing import Dict, List, Optional, Any
@@ -38,12 +39,12 @@ def get_connection(db_path: Optional[str] = None):
 def init_db(db_path: Optional[str] = None) -> None:
     """
     Initializes the SQLite database schema if it doesn't already exist.
-    Creates the 'tickets' and 'ticket_analyses' tables.
+    Creates 'tickets', 'ticket_analyses', and 'ticket_rag_responses' tables.
     """
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
         
-        # Tickets Table
+        # Tickets Table (Phase 1)
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS tickets (
@@ -69,6 +70,20 @@ def init_db(db_path: Optional[str] = None) -> None:
                 department TEXT NOT NULL,
                 reasoning TEXT NOT NULL,
                 analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+            );
+            """
+        )
+
+        # Ticket RAG Suggested Responses Table (Phase 3)
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ticket_rag_responses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id INTEGER NOT NULL UNIQUE,
+                suggested_response TEXT NOT NULL,
+                retrieved_sources TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
             );
             """
@@ -169,7 +184,6 @@ def save_ticket_analysis(
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
         
-        # Insert or Replace analysis record
         cursor.execute(
             """
             INSERT INTO ticket_analyses (ticket_id, category, priority, sentiment, department, reasoning, analyzed_at)
@@ -186,7 +200,6 @@ def save_ticket_analysis(
         )
         analysis_id = cursor.lastrowid
 
-        # Update ticket status if it's currently 'New'
         cursor.execute(
             """
             UPDATE tickets
@@ -215,6 +228,58 @@ def get_ticket_analysis(ticket_id: int, db_path: Optional[str] = None) -> Option
         )
         row = cursor.fetchone()
         return dict(row) if row else None
+
+
+def save_suggested_response(
+    ticket_id: int,
+    suggested_response: str,
+    retrieved_sources: List[str],
+    db_path: Optional[str] = None
+) -> int:
+    """
+    Persists the AI suggested response and the deterministically retrieved source list.
+    """
+    sources_json = json.dumps(retrieved_sources)
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO ticket_rag_responses (ticket_id, suggested_response, retrieved_sources, created_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(ticket_id) DO UPDATE SET
+                suggested_response = excluded.suggested_response,
+                retrieved_sources = excluded.retrieved_sources,
+                created_at = CURRENT_TIMESTAMP;
+            """,
+            (ticket_id, suggested_response.strip(), sources_json)
+        )
+        return cursor.lastrowid
+
+
+def get_suggested_response(ticket_id: int, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves the stored RAG suggested response for a ticket.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, ticket_id, suggested_response, retrieved_sources, created_at
+            FROM ticket_rag_responses
+            WHERE ticket_id = ?;
+            """,
+            (ticket_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        
+        data = dict(row)
+        try:
+            data["retrieved_sources"] = json.loads(data["retrieved_sources"])
+        except Exception:
+            data["retrieved_sources"] = []
+        return data
 
 
 def get_ticket_metrics(db_path: Optional[str] = None) -> Dict[str, int]:

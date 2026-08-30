@@ -1,0 +1,186 @@
+[
+  {
+    "doc_id": "account_faq.txt",
+    "doc_title": "Account Access and Security FAQ",
+    "section": "Password Reset Procedure",
+    "chunk_id": 0,
+    "text": "If you are unable to remember your password or encounter login authentication errors:\n1. Navigate to the login screen and click 'Forgot Password'.\n2. Enter your registered account email address.\n3. Check your inbox for a secure password reset link (valid for 60 minutes).\n4. Follow the link to enter and confirm your new password. Passwords must be at least 10 characters and contain letters, numbers, and symbols.",
+    "embedding_text": "Document: Account Access and Security FAQ\nSection: Password Reset Procedure\nIf you are unable to remember your password or encounter login authentication errors:\n1. Navigate to the login screen and click 'Forgot Password'.\n2. Enter your registered account email address.\n3. Check your inbox for a secure password reset link (valid for 60 minutes).\n4. Follow the link to enter and confirm your new password. Passwords must be at least 10 characters and contain letters, numbers, and symbols."
+  },
+  {
+    "doc_id": "account_faq.txt",
+    "doc_title": "Account Access and Security FAQ",
+    "section": "Session Expiration and Inactivity Timeouts",
+    "chunk_id": 1,
+    "text": "For enterprise security compliance, active user sessions automatically expire after 30 minutes of continuous inactivity. If your session expires while editing, simply refresh the login screen and re-authenticate.",
+    "embedding_text": "Document: Account Access and Security FAQ\nSection: Session Expiration and Inactivity Timeouts\nFor enterprise security compliance, active user sessions automatically expire after 30 minutes of continuous inactivity. If your session expires while editing, simply refresh the login screen and re-authenticate."
+  },
+  {
+    "doc_id": "account_faq.txt",
+    "doc_title": "Account Access and Security FAQ",
+    "section": "Two-Factor Authentication (2FA)",
+    "chunk_id": 2,
+    "text": "SupportFlow AI supports Time-based One-Time Password (TOTP) 2FA using apps such as Google Authenticator, Authy, or 1Password:\n- To enable 2FA: Go to Account Settings > Security > Two-Factor Authentication.\n- If you lose access to your 2FA device, use the emergency backup recovery codes generated during initial setup.\n- If recovery codes are also unavailable, an organization Owner must contact Support to initiate identity verification.",
+    "embedding_text": "Document: Account Access and Security FAQ\nSection: Two-Factor Authentication (2FA)\nSupportFlow AI supports Time-based One-Time Password (TOTP) 2FA using apps such as Google Authenticator, Authy, or 1Password:\n- To enable 2FA: Go to Account Settings > Security > Two-Factor Authentication.\n- If you lose access to your 2FA device, use the emergency backup recovery codes generated during initial setup.\n- If recovery codes are also unavailable, an organization Owner must contact Support to initiate identity verification."
+  },
+  {
+    "doc_id": "account_faq.txt",
+    "doc_title": "Account Access and Security FAQ",
+    "section": "Account Lockout Policy",
+    "chunk_id": 3,
+    "text": "To prevent brute-force attacks, accounts are automatically locked for 15 minutes after 5 consecutive failed login attempts. You can wait 15 minutes for the lockout to expire or trigger a password reset to unlock your account immediately.",
+    "embedding_text": "Document: Account Access and Security FAQ\nSection: Account Lockout Policy\nTo prevent brute-force attacks, accounts are automatically locked for 15 minutes after 5 consecutive failed login attempts. You can wait 15 minutes for the lockout to expire or trigger a password reset to unlock your account immediately."
+  },
+  {
+    "doc_id": "account_faq.txt",
+    "doc_title": "Account Access and Security FAQ",
+    "section": "User Roles and Access Permissions",
+    "chunk_id": 4,
+    "text": "Four default permission tiers are available:\n- Owner: Full administrative and billing authority.\n- Admin: Manages users, integrations, and operational settings.\n- Member: Creates and handles tickets, views reports.\n- Viewer: Read-only access to ticket queues and dashboards.\nRole assignments can be adjusted by Owners or Admins under Account Settings > Team Members.",
+    "embedding_text": "Document: Account Access and Security FAQ\nSection: User Roles and Access Permissions\nFour default permission tiers are available:\n- Owner: Full administrative and billing authority.\n- Admin: Manages users, integrations, and operational settings.\n- Member: Creates and handles tickets, views reports.\n- Viewer: Read-only access to ticket queues and dashboards.\nRole assignments can be adjusted by Owners or Admins under Account Settings > Team Members."
+  },
+  {
+    "doc_id": "billing_policy.txt",
+    "doc_title": "Billing and Payment Policy",
+    "section": "Accepted Payment Methods",
+    "chunk_id": 0,
+    "text": "SupportFlow AI accepts the following payment methods:\n- Credit and Debit Cards: Visa, MasterCard, American Express, and Discover.\n- Digital Wallets: PayPal.\n- Invoicing and Wire Transfer / ACH: Available exclusively for Enterprise annual contracts with order minimums of $5,000.",
+    "embedding_text": "Document: Billing and Payment Policy\nSection: Accepted Payment Methods\nSupportFlow AI accepts the following payment methods:\n- Credit and Debit Cards: Visa, MasterCard, American Express, and Discover.\n- Digital Wallets: PayPal.\n- Invoicing and Wire Transfer / ACH: Available exclusively for Enterprise annual contracts with order minimums of $5,000."
+  },
+  {
+    "doc_id": "billing_policy.txt",
+    "doc_title": "Billing and Payment Policy",
+    "section": "Billing Cycles",
+    "chunk_id": 1,
+    "text": "Subscriptions are billed in advance on either a monthly or annual cadence:\n- Monthly Billing: Charged automatically on the same calendar day each month matching the subscription start date.\n- Annual Billing: Charged once per year and includes a standard 15% discount compared to monthly pricing.",
+    "embedding_text": "Document: Billing and Payment Policy\nSection: Billing Cycles\nSubscriptions are billed in advance on either a monthly or annual cadence:\n- Monthly Billing: Charged automatically on the same calendar day each month matching the subscription start date.\n- Annual Billing: Charged once per year and includes a standard 15% discount compared to monthly pricing."
+  },
+  {
+    "doc_id": "billing_policy.txt",
+    "doc_title": "Billing and Payment Policy",
+    "section": "Updating Payment Details",
+    "chunk_id": 2,
+    "text": "Billing administrators can update stored credit cards or payment details at any time by navigating to:\nAccount Settings > Billing & Invoices > Payment Methods.\nUpdated cards take effect immediately for all subsequent billing cycles.",
+    "embedding_text": "Document: Billing and Payment Policy\nSection: Updating Payment Details\nBilling administrators can update stored credit cards or payment details at any time by navigating to:\nAccount Settings > Billing & Invoices > Payment Methods.\nUpdated cards take effect immediately for all subsequent billing cycles."
+  },
+  {
+    "doc_id": "billing_policy.txt",
+    "doc_title": "Billing and Payment Policy",
+    "section": "Failed Payments and Grace Period",
+    "chunk_id": 3,
+    "text": "If an automatic payment attempt fails:\n1. An automated notification email is sent to the account owner and billing administrator.\n2. The payment processing system will automatically re-attempt the charge on Day 1, Day 3, and Day 7 following the initial failure.\n3. The account enters a 7-day grace period where all services remain fully operational.\n4. If payment is not resolved by the end of Day 7, the account is temporarily suspended until valid payment details are provided.",
+    "embedding_text": "Document: Billing and Payment Policy\nSection: Failed Payments and Grace Period\nIf an automatic payment attempt fails:\n1. An automated notification email is sent to the account owner and billing administrator.\n2. The payment processing system will automatically re-attempt the charge on Day 1, Day 3, and Day 7 following the initial failure.\n3. The account enters a 7-day grace period where all services remain fully operational.\n4. If payment is not resolved by the end of Day 7, the account is temporarily suspended until valid payment details are provided."
+  },
+  {
+    "doc_id": "billing_policy.txt",
+    "doc_title": "Billing and Payment Policy",
+    "section": "Invoices and Receipts",
+    "chunk_id": 4,
+    "text": "PDF invoices and receipts with itemized tax details are automatically generated for every transaction and can be downloaded from the Billing & Invoices portal.",
+    "embedding_text": "Document: Billing and Payment Policy\nSection: Invoices and Receipts\nPDF invoices and receipts with itemized tax details are automatically generated for every transaction and can be downloaded from the Billing & Invoices portal."
+  },
+  {
+    "doc_id": "refund_policy.txt",
+    "doc_title": "Refund and Cancellation Policy",
+    "section": "14-Day Money-Back Guarantee",
+    "chunk_id": 0,
+    "text": "New customers are eligible for a 100% full refund on their first subscription purchase if requested within 14 calendar days of the original transaction date.",
+    "embedding_text": "Document: Refund and Cancellation Policy\nSection: 14-Day Money-Back Guarantee\nNew customers are eligible for a 100% full refund on their first subscription purchase if requested within 14 calendar days of the original transaction date."
+  },
+  {
+    "doc_id": "refund_policy.txt",
+    "doc_title": "Refund and Cancellation Policy",
+    "section": "Renewal and Subscription Charges",
+    "chunk_id": 1,
+    "text": "Subscriptions renewed automatically on a monthly or annual basis are eligible for a refund if a cancellation request is submitted within 48 hours of the renewal charge. Renewal refund requests submitted after 48 hours are non-refundable, but the subscription will remain active until the end of the current paid billing cycle.",
+    "embedding_text": "Document: Refund and Cancellation Policy\nSection: Renewal and Subscription Charges\nSubscriptions renewed automatically on a monthly or annual basis are eligible for a refund if a cancellation request is submitted within 48 hours of the renewal charge. Renewal refund requests submitted after 48 hours are non-refundable, but the subscription will remain active until the end of the current paid billing cycle."
+  },
+  {
+    "doc_id": "refund_policy.txt",
+    "doc_title": "Refund and Cancellation Policy",
+    "section": "Non-Refundable Items",
+    "chunk_id": 2,
+    "text": "The following items and services are strictly non-refundable:\n- Custom onboarding and implementation fees.\n- Dedicated account manager setup fees.\n- API credit overages and usage-based consumption charges once consumed.",
+    "embedding_text": "Document: Refund and Cancellation Policy\nSection: Non-Refundable Items\nThe following items and services are strictly non-refundable:\n- Custom onboarding and implementation fees.\n- Dedicated account manager setup fees.\n- API credit overages and usage-based consumption charges once consumed."
+  },
+  {
+    "doc_id": "refund_policy.txt",
+    "doc_title": "Refund and Cancellation Policy",
+    "section": "Duplicate and Erroneous Charges",
+    "chunk_id": 3,
+    "text": "If a customer is billed multiple times for a single billing cycle due to a technical error or network retry, SupportFlow AI will issue an immediate 100% refund for the duplicate transaction upon verification.",
+    "embedding_text": "Document: Refund and Cancellation Policy\nSection: Duplicate and Erroneous Charges\nIf a customer is billed multiple times for a single billing cycle due to a technical error or network retry, SupportFlow AI will issue an immediate 100% refund for the duplicate transaction upon verification."
+  },
+  {
+    "doc_id": "refund_policy.txt",
+    "doc_title": "Refund and Cancellation Policy",
+    "section": "Refund Processing Times",
+    "chunk_id": 4,
+    "text": "Approved refunds are credited back to the original payment method (credit card, debit card, or PayPal). Please allow 5 to 7 business days for the funds to reflect on your bank or credit card statement depending on your financial institution.",
+    "embedding_text": "Document: Refund and Cancellation Policy\nSection: Refund Processing Times\nApproved refunds are credited back to the original payment method (credit card, debit card, or PayPal). Please allow 5 to 7 business days for the funds to reflect on your bank or credit card statement depending on your financial institution."
+  },
+  {
+    "doc_id": "subscription_policy.txt",
+    "doc_title": "Subscription Plans and Upgrade Policy",
+    "section": "Subscription Tiers and Features",
+    "chunk_id": 0,
+    "text": "SupportFlow AI offers three primary subscription tiers designed for different organizational scales:\n- Starter Tier ($29/month billed monthly, or $290/year): Up to 3 team seats, standard ticket processing, community support.\n- Professional Tier ($99/month billed monthly, or $990/year): Up to 15 team seats, advanced AI ticket intelligence, RAG policy integration, priority email & chat support.\n- Enterprise Tier (Custom starting at $499/month): Unlimited seats, dedicated account manager, custom SLA guarantees (99.9% uptime), custom data residency, and 24/7 phone support.",
+    "embedding_text": "Document: Subscription Plans and Upgrade Policy\nSection: Subscription Tiers and Features\nSupportFlow AI offers three primary subscription tiers designed for different organizational scales:\n- Starter Tier ($29/month billed monthly, or $290/year): Up to 3 team seats, standard ticket processing, community support.\n- Professional Tier ($99/month billed monthly, or $990/year): Up to 15 team seats, advanced AI ticket intelligence, RAG policy integration, priority email & chat support.\n- Enterprise Tier (Custom starting at $499/month): Unlimited seats, dedicated account manager, custom SLA guarantees (99.9% uptime), custom data residency, and 24/7 phone support."
+  },
+  {
+    "doc_id": "subscription_policy.txt",
+    "doc_title": "Subscription Plans and Upgrade Policy",
+    "section": "Upgrading Your Subscription",
+    "chunk_id": 1,
+    "text": "Account Owners can upgrade plans at any time under Account Settings > Subscription Plan:\n- Upgrades take effect immediately upon confirmation.\n- The account is billed a prorated difference for the remaining days in the active billing period.\n- All higher-tier features and additional user seats become accessible instantly.",
+    "embedding_text": "Document: Subscription Plans and Upgrade Policy\nSection: Upgrading Your Subscription\nAccount Owners can upgrade plans at any time under Account Settings > Subscription Plan:\n- Upgrades take effect immediately upon confirmation.\n- The account is billed a prorated difference for the remaining days in the active billing period.\n- All higher-tier features and additional user seats become accessible instantly."
+  },
+  {
+    "doc_id": "subscription_policy.txt",
+    "doc_title": "Subscription Plans and Upgrade Policy",
+    "section": "Downgrading Your Subscription",
+    "chunk_id": 2,
+    "text": "If you choose to downgrade to a lower subscription tier:\n- The downgrade takes effect at the conclusion of the current paid billing cycle.\n- The account retains current plan limits and features until the end of the paid period.\n- No partial refunds or prorated credits are issued for mid-cycle downgrades.",
+    "embedding_text": "Document: Subscription Plans and Upgrade Policy\nSection: Downgrading Your Subscription\nIf you choose to downgrade to a lower subscription tier:\n- The downgrade takes effect at the conclusion of the current paid billing cycle.\n- The account retains current plan limits and features until the end of the paid period.\n- No partial refunds or prorated credits are issued for mid-cycle downgrades."
+  },
+  {
+    "doc_id": "subscription_policy.txt",
+    "doc_title": "Subscription Plans and Upgrade Policy",
+    "section": "Subscription Cancellation",
+    "chunk_id": 3,
+    "text": "Subscriptions can be cancelled anytime without penalty:\n1. Navigate to Account Settings > Subscription Plan > Cancel Subscription.\n2. Follow the confirmation prompts.\n3. Your service remains active until the end of the current billing cycle. After expiration, the account reverts to a read-only state and data is retained for 30 days before permanent deletion.",
+    "embedding_text": "Document: Subscription Plans and Upgrade Policy\nSection: Subscription Cancellation\nSubscriptions can be cancelled anytime without penalty:\n1. Navigate to Account Settings > Subscription Plan > Cancel Subscription.\n2. Follow the confirmation prompts.\n3. Your service remains active until the end of the current billing cycle. After expiration, the account reverts to a read-only state and data is retained for 30 days before permanent deletion."
+  },
+  {
+    "doc_id": "technical_faq.txt",
+    "doc_title": "Technical Support and System FAQ",
+    "section": "Supported File Formats and Upload Limits",
+    "chunk_id": 0,
+    "text": "SupportFlow AI supports attaching documents and data files directly to support tickets:\n- Supported Extensions: PDF (.pdf), CSV (.csv), Excel (.xlsx), PNG (.png), JPEG (.jpg, .jpeg), and plain text (.txt).\n- Maximum File Size: 25 megabytes (MB) per single file attachment.\n- Executable files (.exe, .dmg, .bat, .sh) and archive files (.zip, .tar) are strictly blocked for security reasons.",
+    "embedding_text": "Document: Technical Support and System FAQ\nSection: Supported File Formats and Upload Limits\nSupportFlow AI supports attaching documents and data files directly to support tickets:\n- Supported Extensions: PDF (.pdf), CSV (.csv), Excel (.xlsx), PNG (.png), JPEG (.jpg, .jpeg), and plain text (.txt).\n- Maximum File Size: 25 megabytes (MB) per single file attachment.\n- Executable files (.exe, .dmg, .bat, .sh) and archive files (.zip, .tar) are strictly blocked for security reasons."
+  },
+  {
+    "doc_id": "technical_faq.txt",
+    "doc_title": "Technical Support and System FAQ",
+    "section": "Supported Web Browsers",
+    "chunk_id": 1,
+    "text": "For optimal security and performance, we officially support the following browser versions with JavaScript enabled:\n- Google Chrome: Version 110 or higher.\n- Mozilla Firefox: Version 115 (ESR or Standard) or higher.\n- Apple Safari: Version 16.0 or higher (macOS and iOS).\n- Microsoft Edge: Version 110 or higher.\nLegacy browsers, including Microsoft Internet Explorer, are not supported.",
+    "embedding_text": "Document: Technical Support and System FAQ\nSection: Supported Web Browsers\nFor optimal security and performance, we officially support the following browser versions with JavaScript enabled:\n- Google Chrome: Version 110 or higher.\n- Mozilla Firefox: Version 115 (ESR or Standard) or higher.\n- Apple Safari: Version 16.0 or higher (macOS and iOS).\n- Microsoft Edge: Version 110 or higher.\nLegacy browsers, including Microsoft Internet Explorer, are not supported."
+  },
+  {
+    "doc_id": "technical_faq.txt",
+    "doc_title": "Technical Support and System FAQ",
+    "section": "API Limits and Rate Throttling",
+    "chunk_id": 2,
+    "text": "All API integrations must adhere to tiered rate limits based on active subscription:\n- Starter & Professional Plans: 10,000 API requests per rolling 60-minute window.\n- Enterprise Plan: 100,000 API requests per rolling 60-minute window.\nIf rate limits are exceeded, the API returns an HTTP 429 Too Many Requests status code with a 'Retry-After' header.",
+    "embedding_text": "Document: Technical Support and System FAQ\nSection: API Limits and Rate Throttling\nAll API integrations must adhere to tiered rate limits based on active subscription:\n- Starter & Professional Plans: 10,000 API requests per rolling 60-minute window.\n- Enterprise Plan: 100,000 API requests per rolling 60-minute window.\nIf rate limits are exceeded, the API returns an HTTP 429 Too Many Requests status code with a 'Retry-After' header."
+  },
+  {
+    "doc_id": "technical_faq.txt",
+    "doc_title": "Technical Support and System FAQ",
+    "section": "Troubleshooting 500 Internal Server Errors and Outages",
+    "chunk_id": 3,
+    "text": "If you encounter an unexpected HTTP 500 Internal Server Error:\n1. Clear your browser cache and cookies, then try refreshing the web page.\n2. Check if the issue persists in a private/incognito browser window.\n3. If the error continues, capture the exact timestamp, current URL, and error message and submit a ticket to Technical Support for log inspection.",
+    "embedding_text": "Document: Technical Support and System FAQ\nSection: Troubleshooting 500 Internal Server Errors and Outages\nIf you encounter an unexpected HTTP 500 Internal Server Error:\n1. Clear your browser cache and cookies, then try refreshing the web page.\n2. Check if the issue persists in a private/incognito browser window.\n3. If the error continues, capture the exact timestamp, current URL, and error message and submit a ticket to Technical Support for log inspection."
+  }
+]

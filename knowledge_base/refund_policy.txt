@@ -1,0 +1,19 @@
+# Refund and Cancellation Policy
+
+## 14-Day Money-Back Guarantee
+New customers are eligible for a 100% full refund on their first subscription purchase if requested within 14 calendar days of the original transaction date.
+
+## Renewal and Subscription Charges
+Subscriptions renewed automatically on a monthly or annual basis are eligible for a refund if a cancellation request is submitted within 48 hours of the renewal charge. Renewal refund requests submitted after 48 hours are non-refundable, but the subscription will remain active until the end of the current paid billing cycle.
+
+## Non-Refundable Items
+The following items and services are strictly non-refundable:
+- Custom onboarding and implementation fees.
+- Dedicated account manager setup fees.
+- API credit overages and usage-based consumption charges once consumed.
+
+## Duplicate and Erroneous Charges
+If a customer is billed multiple times for a single billing cycle due to a technical error or network retry, SupportFlow AI will issue an immediate 100% refund for the duplicate transaction upon verification.
+
+## Refund Processing Times
+Approved refunds are credited back to the original payment method (credit card, debit card, or PayPal). Please allow 5 to 7 business days for the funds to reflect on your bank or credit card statement depending on your financial institution.

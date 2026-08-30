@@ -1,0 +1,25 @@
+# Subscription Plans and Upgrade Policy
+
+## Subscription Tiers and Features
+SupportFlow AI offers three primary subscription tiers designed for different organizational scales:
+- Starter Tier ($29/month billed monthly, or $290/year): Up to 3 team seats, standard ticket processing, community support.
+- Professional Tier ($99/month billed monthly, or $990/year): Up to 15 team seats, advanced AI ticket intelligence, RAG policy integration, priority email & chat support.
+- Enterprise Tier (Custom starting at $499/month): Unlimited seats, dedicated account manager, custom SLA guarantees (99.9% uptime), custom data residency, and 24/7 phone support.
+
+## Upgrading Your Subscription
+Account Owners can upgrade plans at any time under Account Settings > Subscription Plan:
+- Upgrades take effect immediately upon confirmation.
+- The account is billed a prorated difference for the remaining days in the active billing period.
+- All higher-tier features and additional user seats become accessible instantly.
+
+## Downgrading Your Subscription
+If you choose to downgrade to a lower subscription tier:
+- The downgrade takes effect at the conclusion of the current paid billing cycle.
+- The account retains current plan limits and features until the end of the paid period.
+- No partial refunds or prorated credits are issued for mid-cycle downgrades.
+
+## Subscription Cancellation
+Subscriptions can be cancelled anytime without penalty:
+1. Navigate to Account Settings > Subscription Plan > Cancel Subscription.
+2. Follow the confirmation prompts.
+3. Your service remains active until the end of the current billing cycle. After expiration, the account reverts to a read-only state and data is retained for 30 days before permanent deletion.

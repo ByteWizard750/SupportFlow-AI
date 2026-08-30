@@ -10,6 +10,8 @@ from .database import (
     update_ticket_status,
     save_ticket_analysis,
     get_ticket_analysis,
+    save_suggested_response,
+    get_suggested_response,
     get_ticket_metrics,
 )
 
@@ -22,5 +24,7 @@ __all__ = [
     "update_ticket_status",
     "save_ticket_analysis",
     "get_ticket_analysis",
+    "save_suggested_response",
+    "get_suggested_response",
     "get_ticket_metrics",
 ]

@@ -2,11 +2,12 @@
 SupportFlow AI — Main Application Entry Point.
 
 Configures Streamlit page setup, modern page navigation,
-and database initialization.
+database initialization, and knowledge base vector index preparation.
 """
 
 import streamlit as st
 from database.database import init_db
+from services.rag_service import build_vector_index
 
 # Page Configuration
 st.set_page_config(
@@ -17,6 +18,12 @@ st.set_page_config(
 
 # Initialize Database Schema
 init_db()
+
+# Prepare Knowledge Base Index
+try:
+    build_vector_index()
+except Exception as e:
+    print(f"[WARN] Vector index auto-build deferred: {e}")
 
 # Sidebar Header Branding
 with st.sidebar:

@@ -2,8 +2,8 @@
 Tickets Queue and Detail View for SupportFlow AI.
 
 Displays all submitted tickets in a structured list with filtering and search,
-and provides a dedicated inspection panel for viewing full ticket details
-and triggering / displaying AI Ticket Intelligence.
+and provides a dedicated inspection panel for viewing full ticket details,
+AI Ticket Intelligence, and RAG Knowledge-Grounded Suggested Responses.
 """
 
 import streamlit as st
@@ -13,6 +13,9 @@ from services.ticket_service import (
     get_ticket_by_id,
     get_ticket_analysis,
     analyze_and_store_ticket,
+    retrieve_ticket_knowledge,
+    generate_and_store_response,
+    get_ticket_suggested_response,
 )
 
 
@@ -40,7 +43,7 @@ def get_sentiment_color(sentiment: str) -> str:
 
 def render_tickets_page():
     st.title("Ticket Queue")
-    st.caption("Inspect support tickets, triage requests, and review AI analysis")
+    st.caption("Inspect support tickets, triage requests, and review AI analysis and grounded responses")
 
     tickets = get_all_tickets()
 
@@ -131,7 +134,7 @@ def render_tickets_page():
         ticket = get_ticket_by_id(selected_id)
 
         if ticket:
-            # Customer Ticket Information
+            # 1. Customer Ticket Information
             with st.container(border=True):
                 header_col1, header_col2 = st.columns([3, 1])
                 with header_col1:
@@ -163,12 +166,12 @@ def render_tickets_page():
                 st.text_area(
                     "Description Text",
                     value=ticket["description"],
-                    height=130,
+                    height=120,
                     disabled=True,
                     label_visibility="collapsed"
                 )
 
-            # AI Ticket Analysis Card
+            # 2. AI Ticket Analysis Card (Phase 2)
             st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
             analysis = get_ticket_analysis(selected_id)
 
@@ -224,6 +227,81 @@ def render_tickets_page():
                             ok, res = analyze_and_store_ticket(selected_id)
                             if ok:
                                 st.success("Ticket analysis complete.")
+                                st.rerun()
+                            else:
+                                st.error(res)
+
+            # 3. RAG Suggested Response & Knowledge Grounding Card (Phase 3)
+            st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+            suggested_res = get_ticket_suggested_response(selected_id)
+            retrieved_chunks = retrieve_ticket_knowledge(selected_id, top_k=3)
+
+            with st.container(border=True):
+                r_hdr1, r_hdr2 = st.columns([3, 1])
+                with r_hdr1:
+                    st.markdown("#### Suggested Resolution")
+                    st.caption("Grounded response drafted using company knowledge base context")
+                with r_hdr2:
+                    if suggested_res:
+                        if st.button("Regenerate", key=f"regen_{selected_id}", use_container_width=True):
+                            with st.spinner("Retrieving knowledge and regenerating response..."):
+                                ok, res = generate_and_store_response(selected_id)
+                                if ok:
+                                    st.success("Suggested response updated.")
+                                    st.rerun()
+                                else:
+                                    st.error(res)
+
+                st.divider()
+
+                if suggested_res:
+                    # Suggested Draft Text Area
+                    st.caption("AI SUGGESTED DRAFT (HUMAN REVIEW PENDING)")
+                    st.text_area(
+                        "Suggested Draft",
+                        value=suggested_res["suggested_response"],
+                        height=160,
+                        disabled=True,
+                        label_visibility="collapsed"
+                    )
+
+                    # Source Document Attribution
+                    sources = suggested_res.get("retrieved_sources", [])
+                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                    st.caption("ATTRIBUTED KNOWLEDGE SOURCES")
+                    if sources:
+                        for src in sources:
+                            st.markdown(f"- `:gray-background[{src}]`")
+                    else:
+                        st.markdown("_No direct knowledge base policy matched._")
+
+                    # Retrieved Knowledge Chunks Inspector
+                    if retrieved_chunks:
+                        with st.expander("Inspect Retrieved Knowledge Chunks"):
+                            for i, chunk in enumerate(retrieved_chunks, 1):
+                                score = chunk.get("similarity_score", 0.0)
+                                doc = chunk.get("doc_title", "Document")
+                                sec = chunk.get("section", "Section")
+                                st.markdown(f"**Chunk {i}: {doc} — {sec}** (Similarity: `{score}`)")
+                                st.info(chunk.get("text", ""))
+
+                    st.caption(f"Drafted at: {suggested_res.get('created_at', '')}")
+
+                else:
+                    st.markdown("Draft a grounded response grounded in the company knowledge base.")
+                    
+                    if retrieved_chunks:
+                        with st.expander(f"Knowledge Context Preview ({len(retrieved_chunks)} matching chunks)"):
+                            for i, chunk in enumerate(retrieved_chunks, 1):
+                                st.markdown(f"**{chunk.get('doc_title')} — {chunk.get('section')}** (Similarity: `{chunk.get('similarity_score')}`)")
+                                st.caption(chunk.get("text")[:180] + "...")
+
+                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                    if st.button("Generate Suggested Response", type="primary", key=f"gen_res_{selected_id}"):
+                        with st.spinner("Retrieving knowledge base and drafting response..."):
+                            ok, res = generate_and_store_response(selected_id)
+                            if ok:
+                                st.success("Suggested response drafted successfully.")
                                 st.rerun()
                             else:
                                 st.error(res)

@@ -1,0 +1,28 @@
+# Account Access and Security FAQ
+
+## Password Reset Procedure
+If you are unable to remember your password or encounter login authentication errors:
+1. Navigate to the login screen and click 'Forgot Password'.
+2. Enter your registered account email address.
+3. Check your inbox for a secure password reset link (valid for 60 minutes).
+4. Follow the link to enter and confirm your new password. Passwords must be at least 10 characters and contain letters, numbers, and symbols.
+
+## Session Expiration and Inactivity Timeouts
+For enterprise security compliance, active user sessions automatically expire after 30 minutes of continuous inactivity. If your session expires while editing, simply refresh the login screen and re-authenticate.
+
+## Two-Factor Authentication (2FA)
+SupportFlow AI supports Time-based One-Time Password (TOTP) 2FA using apps such as Google Authenticator, Authy, or 1Password:
+- To enable 2FA: Go to Account Settings > Security > Two-Factor Authentication.
+- If you lose access to your 2FA device, use the emergency backup recovery codes generated during initial setup.
+- If recovery codes are also unavailable, an organization Owner must contact Support to initiate identity verification.
+
+## Account Lockout Policy
+To prevent brute-force attacks, accounts are automatically locked for 15 minutes after 5 consecutive failed login attempts. You can wait 15 minutes for the lockout to expire or trigger a password reset to unlock your account immediately.
+
+## User Roles and Access Permissions
+Four default permission tiers are available:
+- Owner: Full administrative and billing authority.
+- Admin: Manages users, integrations, and operational settings.
+- Member: Creates and handles tickets, views reports.
+- Viewer: Read-only access to ticket queues and dashboards.
+Role assignments can be adjusted by Owners or Admins under Account Settings > Team Members.

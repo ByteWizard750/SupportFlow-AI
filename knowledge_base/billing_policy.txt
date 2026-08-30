@@ -1,0 +1,27 @@
+# Billing and Payment Policy
+
+## Accepted Payment Methods
+SupportFlow AI accepts the following payment methods:
+- Credit and Debit Cards: Visa, MasterCard, American Express, and Discover.
+- Digital Wallets: PayPal.
+- Invoicing and Wire Transfer / ACH: Available exclusively for Enterprise annual contracts with order minimums of $5,000.
+
+## Billing Cycles
+Subscriptions are billed in advance on either a monthly or annual cadence:
+- Monthly Billing: Charged automatically on the same calendar day each month matching the subscription start date.
+- Annual Billing: Charged once per year and includes a standard 15% discount compared to monthly pricing.
+
+## Updating Payment Details
+Billing administrators can update stored credit cards or payment details at any time by navigating to:
+Account Settings > Billing & Invoices > Payment Methods.
+Updated cards take effect immediately for all subsequent billing cycles.
+
+## Failed Payments and Grace Period
+If an automatic payment attempt fails:
+1. An automated notification email is sent to the account owner and billing administrator.
+2. The payment processing system will automatically re-attempt the charge on Day 1, Day 3, and Day 7 following the initial failure.
+3. The account enters a 7-day grace period where all services remain fully operational.
+4. If payment is not resolved by the end of Day 7, the account is temporarily suspended until valid payment details are provided.
+
+## Invoices and Receipts
+PDF invoices and receipts with itemized tax details are automatically generated for every transaction and can be downloaded from the Billing & Invoices portal.

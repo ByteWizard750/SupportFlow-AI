@@ -2,7 +2,7 @@
 Ticket Service Layer for SupportFlow AI.
 
 Provides business logic, input validation, AI analysis orchestration,
-and interfacing between the UI layer and the SQLite database layer.
+RAG knowledge retrieval, and suggested response management.
 """
 
 from typing import Dict, List, Optional, Tuple, Any
@@ -12,9 +12,13 @@ from database.database import (
     get_ticket_by_id as db_get_ticket_by_id,
     save_ticket_analysis as db_save_ticket_analysis,
     get_ticket_analysis as db_get_ticket_analysis,
+    save_suggested_response as db_save_suggested_response,
+    get_suggested_response as db_get_suggested_response,
     get_ticket_metrics as db_get_ticket_metrics,
 )
 from services.ai_service import analyze_ticket
+from services.rag_service import retrieve_relevant_chunks
+from services.response_service import generate_suggested_response
 
 
 def validate_ticket_input(customer_name: str, subject: str, description: str) -> Tuple[bool, str]:
@@ -144,6 +148,93 @@ def analyze_and_store_ticket(
         return False, f"Database error saving analysis: {str(e)}"
 
 
+def retrieve_ticket_knowledge(
+    ticket_id: int,
+    top_k: int = 3,
+    db_path: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Retrieves the most relevant knowledge base chunks for a ticket query.
+    """
+    ticket = get_ticket_by_id(ticket_id, db_path=db_path)
+    if not ticket:
+        return []
+
+    query = f"Subject: {ticket['subject']}\nIssue: {ticket['description']}"
+    return retrieve_relevant_chunks(query=query, top_k=top_k)
+
+
+def generate_and_store_response(
+    ticket_id: int,
+    db_path: Optional[str] = None
+) -> Tuple[bool, Any]:
+    """
+    Executes the full Phase 3 RAG response pipeline:
+    1. Retrieves ticket & analysis details.
+    2. Retrieves relevant knowledge base chunks.
+    3. Generates grounded suggested response with deterministic source attribution.
+    4. Persists the response to SQLite.
+
+    Returns:
+        (True, result_dict) on success
+        (False, error_message) on failure
+    """
+    ticket = get_ticket_by_id(ticket_id, db_path=db_path)
+    if not ticket:
+        return False, f"Ticket #{ticket_id} was not found."
+
+    analysis = get_ticket_analysis(ticket_id, db_path=db_path)
+    category = analysis["category"] if analysis else None
+    priority = analysis["priority"] if analysis else None
+
+    # Retrieve Knowledge Base Context
+    query = f"Subject: {ticket['subject']}\nIssue: {ticket['description']}"
+    chunks = retrieve_relevant_chunks(query=query, top_k=3)
+
+    # Generate Grounded Response via Gemini
+    success, response_text, sources = generate_suggested_response(
+        customer_name=ticket["customer_name"],
+        subject=ticket["subject"],
+        description=ticket["description"],
+        retrieved_chunks=chunks,
+        category=category,
+        priority=priority
+    )
+
+    if not success:
+        return False, response_text
+
+    # Persist to Database
+    try:
+        db_save_suggested_response(
+            ticket_id=ticket_id,
+            suggested_response=response_text,
+            retrieved_sources=sources,
+            db_path=db_path
+        )
+        return True, {
+            "suggested_response": response_text,
+            "retrieved_sources": sources,
+            "chunks": chunks
+        }
+    except Exception as e:
+        return False, f"Database error saving response: {str(e)}"
+
+
+def get_ticket_suggested_response(
+    ticket_id: int,
+    db_path: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves stored RAG suggested response for a ticket.
+    """
+    try:
+        return db_get_suggested_response(ticket_id=ticket_id, db_path=db_path)
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch suggested response for ticket #{ticket_id}: {e}")
+        return None
+
+
 def get_dashboard_summary(db_path: Optional[str] = None) -> Dict[str, Any]:
     """
     Calculates summary metrics and retrieves the recent tickets for the dashboard.
@@ -152,7 +243,7 @@ def get_dashboard_summary(db_path: Optional[str] = None) -> Dict[str, Any]:
     try:
         metrics = db_get_ticket_metrics(db_path=db_path)
         all_tickets = db_get_all_tickets(db_path=db_path)
-        recent_tickets = all_tickets[:5]  # Top 5 most recent
+        recent_tickets = all_tickets[:5]
         return {
             "total_tickets": metrics["total"],
             "new_tickets": metrics["new"],
