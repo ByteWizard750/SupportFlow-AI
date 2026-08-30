@@ -11,19 +11,8 @@ from services.ticket_service import get_all_tickets, get_ticket_by_id
 
 
 def render_tickets_page():
-    st.markdown(
-        """
-        <div style="margin-bottom: 2rem;">
-            <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700; color: #1e293b;">
-                Ticket Queue & Details
-            </h1>
-            <p style="margin: 0.35rem 0 0 0; color: #64748b; font-size: 0.95rem;">
-                Browse, search, and inspect customer support tickets
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.title("Ticket Queue & Details")
+    st.caption("Browse, search, and inspect customer support tickets")
 
     tickets = get_all_tickets()
 
@@ -69,10 +58,10 @@ def render_tickets_page():
         return
 
     # Layout: Split into Table / List and Detail Inspector
-    col_list, col_detail = st.columns([1, 1.1], gap="large")
+    col_list, col_detail = st.columns([1, 1.2], gap="large")
 
     with col_list:
-        st.markdown("##### Ticket List")
+        st.subheader("Ticket List")
 
         # Prepare selectbox options
         ticket_options = {
@@ -112,51 +101,34 @@ def render_tickets_page():
         )
 
     with col_detail:
-        st.markdown("##### Ticket Details")
+        st.subheader("Ticket Details")
         ticket = get_ticket_by_id(selected_id)
 
         if ticket:
-            # Status Badge Styling
-            status_color = "#0284c7" if ticket["status"] == "New" else "#10b981"
-            status_bg = "#e0f2fe" if ticket["status"] == "New" else "#d1fae5"
+            with st.container(border=True):
+                header_col1, header_col2 = st.columns([3, 1])
+                with header_col1:
+                    st.markdown(f"### Ticket #{ticket['id']}")
+                with header_col2:
+                    st.markdown(f"**:blue-background[{ticket['status'].upper()}]**")
 
-            st.markdown(
-                f"""
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1.25rem;">
-                        <div>
-                            <span style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">Ticket #{ticket['id']}</span>
-                        </div>
-                        <div>
-                            <span style="background-color: {status_bg}; color: {status_color}; padding: 0.3rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
-                                {ticket['status']}
-                            </span>
-                        </div>
-                    </div>
+                st.divider()
 
-                    <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Customer</div>
-                        <div style="font-size: 1.05rem; font-weight: 600; color: #1e293b; margin-top: 0.15rem;">{ticket['customer_name']}</div>
-                    </div>
+                m_col1, m_col2 = st.columns(2)
+                with m_col1:
+                    st.caption("CUSTOMER")
+                    st.markdown(f"**{ticket['customer_name']}**")
+                with m_col2:
+                    st.caption("SUBMITTED AT")
+                    st.markdown(f"{ticket['created_at']}")
 
-                    <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Created At</div>
-                        <div style="font-size: 0.9rem; color: #475569; margin-top: 0.15rem;">{ticket['created_at']}</div>
-                    </div>
+                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                st.caption("SUBJECT")
+                st.markdown(f"**{ticket['subject']}**")
 
-                    <div style="margin-bottom: 1.25rem;">
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Subject</div>
-                        <div style="font-size: 1.05rem; font-weight: 600; color: #0f172a; margin-top: 0.15rem;">{ticket['subject']}</div>
-                    </div>
-
-                    <div>
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem;">Full Description</div>
-                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; color: #334155; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap;">{ticket['description']}</div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                st.caption("DESCRIPTION")
+                st.info(ticket["description"], icon="💬")
         else:
             st.error("Selected ticket could not be loaded.")
 

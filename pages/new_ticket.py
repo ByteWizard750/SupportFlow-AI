@@ -10,27 +10,10 @@ from services.ticket_service import create_ticket
 
 
 def render_new_ticket_page():
-    st.markdown(
-        """
-        <div style="margin-bottom: 2rem;">
-            <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700; color: #1e293b;">
-                Create Support Ticket
-            </h1>
-            <p style="margin: 0.35rem 0 0 0; color: #64748b; font-size: 0.95rem;">
-                Submit a new customer inquiry or incident into the support queue
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.title("Create Support Ticket")
+    st.caption("Submit a new customer inquiry or incident into the support queue")
 
-    # Initialize form state in session if needed
-    if "form_customer_name" not in st.session_state:
-        st.session_state["form_customer_name"] = ""
-    if "form_subject" not in st.session_state:
-        st.session_state["form_subject"] = ""
-    if "form_description" not in st.session_state:
-        st.session_state["form_description"] = ""
+    # Initialize form success notification state
     if "ticket_created_success" not in st.session_state:
         st.session_state["ticket_created_success"] = None
 
@@ -38,10 +21,10 @@ def render_new_ticket_page():
         st.success(st.session_state["ticket_created_success"])
         st.session_state["ticket_created_success"] = None
 
-    # Form card container
-    with st.container():
+    # Form in a bordered container
+    with st.container(border=True):
         with st.form("new_ticket_form", clear_on_submit=True):
-            st.markdown("##### Ticket Information")
+            st.subheader("Ticket Information")
 
             customer_name = st.text_input(
                 "Customer Name *",
@@ -62,10 +45,8 @@ def render_new_ticket_page():
                 help="Detailed description of the customer's request."
             )
 
-            st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-            col_btn, _ = st.columns([1, 4])
-            with col_btn:
-                submitted = st.form_submit_button("Submit Ticket", use_container_width=True)
+            st.divider()
+            submitted = st.form_submit_button("Submit Ticket", type="primary")
 
             if submitted:
                 success, result = create_ticket(
