@@ -36,4 +36,5 @@ def is_gemini_configured() -> bool:
 
 
 # AI Model Configuration
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
+# Uses gemini-3-flash-preview as the active supported flash model
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3-flash-preview")

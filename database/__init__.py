@@ -7,6 +7,9 @@ from .database import (
     create_ticket,
     get_all_tickets,
     get_ticket_by_id,
+    update_ticket_status,
+    save_ticket_analysis,
+    get_ticket_analysis,
     get_ticket_metrics,
 )
 
@@ -16,5 +19,8 @@ __all__ = [
     "create_ticket",
     "get_all_tickets",
     "get_ticket_by_id",
+    "update_ticket_status",
+    "save_ticket_analysis",
+    "get_ticket_analysis",
     "get_ticket_metrics",
 ]

@@ -1,18 +1,46 @@
 """
-Tickets Queue and Detail View for SupportFlow AI (Phase 1).
+Tickets Queue and Detail View for SupportFlow AI.
 
 Displays all submitted tickets in a structured list with filtering and search,
-and provides a dedicated inspection panel for viewing full ticket details.
+and provides a dedicated inspection panel for viewing full ticket details
+and triggering / displaying AI Ticket Intelligence.
 """
 
 import streamlit as st
 import pandas as pd
-from services.ticket_service import get_all_tickets, get_ticket_by_id
+from services.ticket_service import (
+    get_all_tickets,
+    get_ticket_by_id,
+    get_ticket_analysis,
+    analyze_and_store_ticket,
+)
+
+
+def get_priority_color(priority: str) -> str:
+    priority_lower = priority.lower()
+    if priority_lower == "critical":
+        return ":red-background"
+    elif priority_lower == "high":
+        return ":orange-background"
+    elif priority_lower == "medium":
+        return ":blue-background"
+    return ":gray-background"
+
+
+def get_sentiment_color(sentiment: str) -> str:
+    sentiment_lower = sentiment.lower()
+    if sentiment_lower == "positive":
+        return ":green-background"
+    elif sentiment_lower == "neutral":
+        return ":gray-background"
+    elif sentiment_lower == "negative":
+        return ":orange-background"
+    return ":red-background"
 
 
 def render_tickets_page():
     st.title("Ticket Queue & Details")
-    st.caption("Browse, search, and inspect customer support tickets")
+    st.caption("Browse, search, and inspect customer support tickets with AI intelligence")
 
     tickets = get_all_tickets()
 
@@ -58,7 +86,7 @@ def render_tickets_page():
         return
 
     # Layout: Split into Table / List and Detail Inspector
-    col_list, col_detail = st.columns([1, 1.2], gap="large")
+    col_list, col_detail = st.columns([1, 1.25], gap="large")
 
     with col_list:
         st.subheader("Ticket List")
@@ -105,12 +133,18 @@ def render_tickets_page():
         ticket = get_ticket_by_id(selected_id)
 
         if ticket:
+            # 1. Customer Ticket Overview Card
             with st.container(border=True):
                 header_col1, header_col2 = st.columns([3, 1])
                 with header_col1:
                     st.markdown(f"### Ticket #{ticket['id']}")
                 with header_col2:
-                    st.markdown(f"**:blue-background[{ticket['status'].upper()}]**")
+                    status_badge = (
+                        f"**:green-background[{ticket['status'].upper()}]**"
+                        if ticket["status"] == "AI Analyzed"
+                        else f"**:blue-background[{ticket['status'].upper()}]**"
+                    )
+                    st.markdown(status_badge)
 
                 st.divider()
 
@@ -129,6 +163,72 @@ def render_tickets_page():
                 st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
                 st.caption("DESCRIPTION")
                 st.info(ticket["description"], icon="💬")
+
+            # 2. AI Ticket Analysis Card (Phase 2)
+            st.markdown("<div style='height: 0.75rem;'></div>", unsafe_allow_html=True)
+            analysis = get_ticket_analysis(selected_id)
+
+            if analysis:
+                with st.container(border=True):
+                    ai_hdr1, ai_hdr2 = st.columns([3, 1])
+                    with ai_hdr1:
+                        st.markdown("#### ✨ AI Ticket Intelligence")
+                    with ai_hdr2:
+                        if st.button("🔄 Re-analyze", key=f"reanalyze_{selected_id}", use_container_width=True):
+                            with st.spinner("Re-analyzing with Gemini LLM..."):
+                                ok, res = analyze_and_store_ticket(selected_id)
+                                if ok:
+                                    st.success("Analysis refreshed!")
+                                    st.rerun()
+                                else:
+                                    st.error(f"Analysis failed: {res}")
+
+                    st.divider()
+
+                    # 4 Metadata Fields
+                    m1, m2 = st.columns(2)
+                    with m1:
+                        st.caption("CATEGORY")
+                        st.markdown(f"**{analysis['category']}**")
+                    with m2:
+                        st.caption("RECOMMENDED DEPARTMENT")
+                        st.markdown(f"**{analysis['department']}**")
+
+                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                    m3, m4 = st.columns(2)
+                    with m3:
+                        st.caption("PRIORITY")
+                        p_color = get_priority_color(analysis["priority"])
+                        st.markdown(f"**{p_color}[{analysis['priority'].upper()}]**")
+                    with m4:
+                        st.caption("SENTIMENT")
+                        s_color = get_sentiment_color(analysis["sentiment"])
+                        st.markdown(f"**{s_color}[{analysis['sentiment'].upper()}]**")
+
+                    st.markdown("<div style='height: 0.75rem;'></div>", unsafe_allow_html=True)
+                    st.caption("AI REASONING")
+                    st.markdown(
+                        f"""
+                        > **Summary:** {analysis['reasoning']}
+                        """
+                    )
+                    st.caption(f"Analyzed on: {analysis['analyzed_at']}")
+
+            else:
+                with st.container(border=True):
+                    st.markdown("#### ✨ AI Ticket Intelligence")
+                    st.caption("This ticket has not yet been processed by the Gemini AI analysis engine.")
+                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                    
+                    if st.button("✨ Analyze Ticket with AI", type="primary", key=f"analyze_btn_{selected_id}"):
+                        with st.spinner("Analyzing ticket with Gemini LLM..."):
+                            ok, res = analyze_and_store_ticket(selected_id)
+                            if ok:
+                                st.success("Ticket analyzed successfully!")
+                                st.rerun()
+                            else:
+                                st.error(f"Analysis failed: {res}")
+
         else:
             st.error("Selected ticket could not be loaded.")
 
