@@ -64,7 +64,7 @@ class TicketAnalysisSchema(BaseModel):
         description="The recommended internal support department to resolve this ticket."
     )
     reasoning: str = Field(
-        description="A concise 1-2 sentence explanation justifying the assigned category, priority, sentiment, and department."
+        description="A concise 1-2 sentence explanation justifying the assigned category, priority, sentiment, and department based strictly on evidence in the ticket."
     )
 
 
@@ -72,17 +72,24 @@ SYSTEM_PROMPT = """
 You are an expert customer support operations assistant. Analyze the incoming customer support ticket carefully.
 Determine the most appropriate category, priority level, customer sentiment, recommended department, and a concise 1-2 sentence reasoning.
 
-Classification Rules:
-- Priority:
-  - Low: General inquiries, simple feedback, minor non-blocking issues.
-  - Medium: Issues affecting a single user with workaround or non-urgent problems.
-  - High: Payment issues, account lockouts, broken core features affecting individual work.
-  - Critical: Security concerns, major service outages, widespread system failures.
-- Sentiment:
-  - Positive: Gratitude, compliments, pleasant tone.
-  - Neutral: Direct, matter-of-fact inquiries or status requests.
-  - Negative: Disappointment, mild dissatisfaction, inconvenience.
-  - Frustrated: Anger, urgency, repeated unresolved issues, demanding tone.
+Priority Classification Guidelines:
+- Low: General questions, information requests, feature inquiries, or minor issues with little or no impact on normal usage.
+- Medium: Standard customer problems requiring support (such as routine refund requests, duplicate monthly charges, single-user password/login issues, or minor functional problems), where there is no explicit evidence of major business disruption, urgent deadlines, or widespread failure.
+- High: Significant disruption to an important/core function, a user or team being substantially blocked from critical work, major financial impact, or urgent issues with explicit deadlines.
+- Critical: Complete service outage, security breach, data loss, severe system failure, or an issue affecting many users/business-critical operations.
+
+Important Classification Rules:
+1. Do not assume urgency, business impact, financial severity, or widespread impact unless it is explicitly stated in the ticket.
+2. Do not classify routine refund requests or single-user billing/login issues as High priority unless the customer explicitly describes severe financial harm or critical business blockage.
+3. When uncertain between Medium and High, always choose Medium unless there is clear evidence of significant disruption or urgent impact.
+4. Critical should only be used for genuinely severe situations such as outages, security incidents, data loss, or widespread service failures.
+5. The AI reasoning must justify the selected priority based only on facts present in the ticket.
+
+Sentiment Classification Guidelines:
+- Positive: Gratitude, compliments, pleasant tone.
+- Neutral: Direct, matter-of-fact inquiries or status requests.
+- Negative: Disappointment, mild dissatisfaction, inconvenience.
+- Frustrated: Anger, urgency, repeated unresolved issues, demanding tone.
 
 Always base your classification strictly on the ticket context, without assuming facts not in the text.
 """
