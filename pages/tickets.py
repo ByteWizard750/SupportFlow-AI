@@ -2,8 +2,9 @@
 Tickets Queue and Detail View for SupportFlow AI.
 
 Displays all submitted tickets in a structured list with filtering and search,
-and provides a dedicated inspection panel for viewing full ticket details,
-AI Ticket Intelligence, and RAG Knowledge-Grounded Suggested Responses.
+and provides a dedicated inspection panel with tabbed navigation for:
+- Ticket Overview & AI Intelligence
+- Grounded Suggested Resolution (RAG)
 """
 
 import streamlit as st
@@ -19,60 +20,64 @@ from services.ticket_service import (
 )
 
 
-def get_priority_color(priority: str) -> str:
-    priority_lower = priority.lower()
-    if priority_lower == "critical":
-        return ":red-background"
-    elif priority_lower == "high":
-        return ":orange-background"
-    elif priority_lower == "medium":
-        return ":blue-background"
-    return ":gray-background"
+def get_priority_badge(priority: str) -> str:
+    p_lower = priority.lower()
+    if p_lower == "critical":
+        return ":red-background[CRITICAL]"
+    elif p_lower == "high":
+        return ":orange-background[HIGH]"
+    elif p_lower == "medium":
+        return ":blue-background[MEDIUM]"
+    return ":gray-background[LOW]"
 
 
-def get_sentiment_color(sentiment: str) -> str:
-    sentiment_lower = sentiment.lower()
-    if sentiment_lower == "positive":
-        return ":green-background"
-    elif sentiment_lower == "neutral":
-        return ":gray-background"
-    elif sentiment_lower == "negative":
-        return ":orange-background"
-    return ":red-background"
+def get_sentiment_badge(sentiment: str) -> str:
+    s_lower = sentiment.lower()
+    if s_lower == "positive":
+        return ":green-background[POSITIVE]"
+    elif s_lower == "neutral":
+        return ":gray-background[NEUTRAL]"
+    elif s_lower == "negative":
+        return ":orange-background[NEGATIVE]"
+    return ":red-background[FRUSTRATED]"
 
 
 def render_tickets_page():
+    # Page Header
     st.title("Ticket Queue")
-    st.caption("Inspect support tickets, triage requests, and review AI analysis and grounded responses")
+    st.caption("Browse, triage, and inspect customer tickets with AI intelligence and grounded knowledge base resolutions")
+    st.divider()
 
     tickets = get_all_tickets()
 
     if not tickets:
-        st.info("No tickets found in the database. Use the 'New Ticket' page to create one.")
+        st.info("No tickets found in the database. Navigate to 'New Ticket' to create one.")
         return
 
-    # Filter & Search Controls
-    col_search, col_status = st.columns([3, 1])
-    with col_search:
+    # Filter Bar
+    filter_col1, filter_col2, filter_col3 = st.columns([3, 1.5, 1])
+    with filter_col1:
         search_query = st.text_input(
-            "Search Tickets",
-            placeholder="Search by ticket ID, customer name, or subject keywords...",
+            "Search",
+            placeholder="Search by ticket ID, customer name, or keywords...",
             label_visibility="collapsed"
         )
-    with col_status:
+    with filter_col2:
         status_options = ["All Statuses"] + sorted(list({t["status"] for t in tickets}))
         selected_status = st.selectbox(
-            "Status Filter",
+            "Status",
             options=status_options,
             label_visibility="collapsed"
         )
+    with filter_col3:
+        st.caption(f"**{len(tickets)} total**")
 
-    # Filter logic
-    filtered_tickets = tickets
+    # Filter Logic
+    filtered = tickets
     if search_query.strip():
         q = search_query.strip().lower()
-        filtered_tickets = [
-            t for t in filtered_tickets
+        filtered = [
+            t for t in filtered
             if q in str(t["id"]).lower()
             or q in t["customer_name"].lower()
             or q in t["subject"].lower()
@@ -80,41 +85,38 @@ def render_tickets_page():
         ]
 
     if selected_status != "All Statuses":
-        filtered_tickets = [t for t in filtered_tickets if t["status"] == selected_status]
+        filtered = [t for t in filtered if t["status"] == selected_status]
 
-    st.markdown(f"**Found {len(filtered_tickets)} ticket(s)**")
-
-    if not filtered_tickets:
-        st.warning("No tickets match the selected filter criteria.")
+    if not filtered:
+        st.warning("No tickets match the search criteria.")
         return
 
-    # Layout: Split into Table / List and Detail Inspector
-    col_list, col_detail = st.columns([1, 1.25], gap="large")
+    # Two-Column Cockpit Layout
+    col_queue, col_detail = st.columns([1.1, 1.4], gap="medium")
 
-    with col_list:
+    with col_queue:
         st.subheader("Queue")
 
-        ticket_options = {
-            f"#{t['id']} — {t['subject'][:35]} ({t['customer_name']})": t["id"]
-            for t in filtered_tickets
+        ticket_map = {
+            f"#{t['id']} — {t['subject'][:32]}... ({t['customer_name']})": t["id"]
+            for t in filtered
         }
 
-        selected_label = st.selectbox(
-            "Select ticket to view:",
-            options=list(ticket_options.keys()),
-            key="selected_ticket_selector"
+        selected_key = st.selectbox(
+            "Select Ticket to Inspect",
+            options=list(ticket_map.keys()),
+            key="ticket_queue_selector"
         )
-        selected_id = ticket_options[selected_label]
+        selected_id = ticket_map[selected_key]
 
-        # Table overview
+        # Compact Overview Table
         table_rows = []
-        for t in filtered_tickets:
+        for t in filtered:
             table_rows.append({
                 "ID": f"#{t['id']}",
                 "Customer": t["customer_name"],
                 "Subject": t["subject"],
                 "Status": t["status"],
-                "Date": t["created_at"]
             })
         df = pd.DataFrame(table_rows)
         st.dataframe(
@@ -125,73 +127,62 @@ def render_tickets_page():
                 "Customer": st.column_config.TextColumn("Customer", width="medium"),
                 "Subject": st.column_config.TextColumn("Subject", width="large"),
                 "Status": st.column_config.TextColumn("Status", width="small"),
-                "Date": st.column_config.TextColumn("Created", width="medium"),
             }
         )
 
     with col_detail:
-        st.subheader("Ticket Details")
         ticket = get_ticket_by_id(selected_id)
+        if not ticket:
+            st.error("Selected ticket could not be loaded.")
+            return
 
-        if ticket:
-            # 1. Customer Ticket Information
-            with st.container(border=True):
-                header_col1, header_col2 = st.columns([3, 1])
-                with header_col1:
-                    st.markdown(f"### Ticket #{ticket['id']}")
-                with header_col2:
-                    status_badge = (
-                        f"**:green-background[{ticket['status'].upper()}]**"
-                        if ticket["status"] == "AI Analyzed"
-                        else f"**:blue-background[{ticket['status'].upper()}]**"
-                    )
-                    st.markdown(status_badge)
+        analysis = get_ticket_analysis(selected_id)
+        suggested_res = get_ticket_suggested_response(selected_id)
+        retrieved_chunks = retrieve_ticket_knowledge(selected_id, top_k=3)
 
-                st.divider()
+        # Header Bar inside bordered card
+        with st.container(border=True):
+            # Ticket Header Row
+            hdr_left, hdr_right = st.columns([3, 1.2])
+            with hdr_left:
+                st.subheader(f"Ticket #{ticket['id']}: {ticket['subject']}")
+                st.caption(f"Submitted by **{ticket['customer_name']}** on {ticket['created_at']}")
+            with hdr_right:
+                status_color = ":green-background" if ticket["status"] == "AI Analyzed" else ":blue-background"
+                st.markdown(f"**{status_color}[{ticket['status'].upper()}]**")
 
-                m_col1, m_col2 = st.columns(2)
-                with m_col1:
-                    st.caption("CUSTOMER")
-                    st.markdown(f"**{ticket['customer_name']}**")
-                with m_col2:
-                    st.caption("SUBMISSION TIMESTAMP")
-                    st.markdown(f"{ticket['created_at']}")
+            # Tabs for Clean Inspection
+            tab_overview, tab_resolution = st.tabs(["Overview & AI Triage", "Suggested Resolution (RAG)"])
 
-                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-                st.caption("SUBJECT")
-                st.markdown(f"**{ticket['subject']}**")
-
-                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-                st.caption("DESCRIPTION")
+            with tab_overview:
+                # Customer Description
+                st.caption("CUSTOMER INQUIRY")
                 st.text_area(
-                    "Description Text",
+                    "Description",
                     value=ticket["description"],
-                    height=120,
+                    height=100,
                     disabled=True,
                     label_visibility="collapsed"
                 )
 
-            # 2. AI Ticket Analysis Card (Phase 2)
-            st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-            analysis = get_ticket_analysis(selected_id)
+                st.divider()
 
-            if analysis:
-                with st.container(border=True):
-                    ai_hdr1, ai_hdr2 = st.columns([3, 1])
-                    with ai_hdr1:
-                        st.markdown("#### AI Intelligence")
-                    with ai_hdr2:
-                        if st.button("Re-analyze", key=f"reanalyze_{selected_id}", use_container_width=True):
-                            with st.spinner("Processing analysis..."):
+                # AI Intelligence Sub-section
+                ai_top_left, ai_top_right = st.columns([3, 1.2])
+                with ai_top_left:
+                    st.markdown("##### AI Triage Intelligence")
+                with ai_top_right:
+                    if analysis:
+                        if st.button("Re-analyze", key=f"reanalyze_tab_{selected_id}", use_container_width=True):
+                            with st.spinner("Analyzing..."):
                                 ok, res = analyze_and_store_ticket(selected_id)
                                 if ok:
-                                    st.success("Analysis updated.")
+                                    st.success("Analysis refreshed.")
                                     st.rerun()
                                 else:
                                     st.error(res)
 
-                    st.divider()
-
+                if analysis:
                     m1, m2 = st.columns(2)
                     with m1:
                         st.caption("CATEGORY")
@@ -200,114 +191,88 @@ def render_tickets_page():
                         st.caption("RECOMMENDED DEPARTMENT")
                         st.markdown(f"**{analysis['department']}**")
 
-                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
                     m3, m4 = st.columns(2)
                     with m3:
                         st.caption("PRIORITY")
-                        p_color = get_priority_color(analysis["priority"])
-                        st.markdown(f"**{p_color}[{analysis['priority'].upper()}]**")
+                        st.markdown(f"**{get_priority_badge(analysis['priority'])}**")
                     with m4:
                         st.caption("SENTIMENT")
-                        s_color = get_sentiment_color(analysis["sentiment"])
-                        st.markdown(f"**{s_color}[{analysis['sentiment'].upper()}]**")
+                        st.markdown(f"**{get_sentiment_badge(analysis['sentiment'])}**")
 
-                    st.markdown("<div style='height: 0.75rem;'></div>", unsafe_allow_html=True)
                     st.caption("REASONING")
                     st.markdown(f"> {analysis['reasoning']}")
-                    st.caption(f"Analyzed at: {analysis['analyzed_at']}")
-
-            else:
-                with st.container(border=True):
-                    st.markdown("#### AI Intelligence")
-                    st.caption("This ticket has not yet been processed by the AI analysis engine.")
-                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-                    
-                    if st.button("Analyze Ticket", type="primary", key=f"analyze_btn_{selected_id}"):
-                        with st.spinner("Processing analysis..."):
+                else:
+                    st.caption("This ticket has not been classified by the AI engine yet.")
+                    if st.button("Analyze Ticket with AI", type="primary", key=f"analyze_tab_btn_{selected_id}"):
+                        with st.spinner("Analyzing ticket..."):
                             ok, res = analyze_and_store_ticket(selected_id)
                             if ok:
-                                st.success("Ticket analysis complete.")
+                                st.success("Ticket analyzed.")
                                 st.rerun()
                             else:
                                 st.error(res)
 
-            # 3. RAG Suggested Response & Knowledge Grounding Card (Phase 3)
-            st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-            suggested_res = get_ticket_suggested_response(selected_id)
-            retrieved_chunks = retrieve_ticket_knowledge(selected_id, top_k=3)
-
-            with st.container(border=True):
-                r_hdr1, r_hdr2 = st.columns([3, 1])
-                with r_hdr1:
-                    st.markdown("#### Suggested Resolution")
-                    st.caption("Grounded response drafted using company knowledge base context")
-                with r_hdr2:
+            with tab_resolution:
+                r_top_left, r_top_right = st.columns([3, 1.2])
+                with r_top_left:
+                    st.markdown("##### Grounded AI Resolution")
+                    st.caption("Generated strictly from company knowledge base documentation")
+                with r_top_right:
                     if suggested_res:
-                        if st.button("Regenerate", key=f"regen_{selected_id}", use_container_width=True):
-                            with st.spinner("Retrieving knowledge and regenerating response..."):
+                        if st.button("Regenerate", key=f"regen_tab_{selected_id}", use_container_width=True):
+                            with st.spinner("Regenerating response..."):
                                 ok, res = generate_and_store_response(selected_id)
                                 if ok:
-                                    st.success("Suggested response updated.")
+                                    st.success("Response updated.")
                                     st.rerun()
                                 else:
                                     st.error(res)
 
-                st.divider()
-
                 if suggested_res:
-                    # Suggested Draft Text Area
-                    st.caption("AI SUGGESTED DRAFT (HUMAN REVIEW PENDING)")
+                    st.caption("DRAFT RESPONSE (PENDING AGENT APPROVAL)")
                     st.text_area(
-                        "Suggested Draft",
+                        "Draft Resolution",
                         value=suggested_res["suggested_response"],
-                        height=160,
+                        height=140,
                         disabled=True,
                         label_visibility="collapsed"
                     )
 
-                    # Source Document Attribution
+                    # Attributed Sources
                     sources = suggested_res.get("retrieved_sources", [])
-                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
                     st.caption("ATTRIBUTED KNOWLEDGE SOURCES")
                     if sources:
-                        for src in sources:
-                            st.markdown(f"- `:gray-background[{src}]`")
+                        for s in sources:
+                            st.markdown(f"- `:gray-background[{s}]`")
                     else:
-                        st.markdown("_No direct knowledge base policy matched._")
+                        st.caption("No direct policy document matched.")
 
-                    # Retrieved Knowledge Chunks Inspector
+                    # Matching Chunks Expander
                     if retrieved_chunks:
-                        with st.expander("Inspect Retrieved Knowledge Chunks"):
-                            for i, chunk in enumerate(retrieved_chunks, 1):
-                                score = chunk.get("similarity_score", 0.0)
-                                doc = chunk.get("doc_title", "Document")
-                                sec = chunk.get("section", "Section")
-                                st.markdown(f"**Chunk {i}: {doc} — {sec}** (Similarity: `{score}`)")
-                                st.info(chunk.get("text", ""))
+                        with st.expander(f"Inspect Knowledge Context ({len(retrieved_chunks)} Chunks)"):
+                            for i, c in enumerate(retrieved_chunks, 1):
+                                st.markdown(f"**{c.get('doc_title')} — {c.get('section')}** (Score: `{c.get('similarity_score')}`)")
+                                st.info(c.get("text", ""))
 
                     st.caption(f"Drafted at: {suggested_res.get('created_at', '')}")
 
                 else:
-                    st.markdown("Draft a grounded response grounded in the company knowledge base.")
+                    st.caption("Generate a resolution draft grounded in internal knowledge base documentation.")
                     
                     if retrieved_chunks:
                         with st.expander(f"Knowledge Context Preview ({len(retrieved_chunks)} matching chunks)"):
-                            for i, chunk in enumerate(retrieved_chunks, 1):
-                                st.markdown(f"**{chunk.get('doc_title')} — {chunk.get('section')}** (Similarity: `{chunk.get('similarity_score')}`)")
-                                st.caption(chunk.get("text")[:180] + "...")
+                            for i, c in enumerate(retrieved_chunks, 1):
+                                st.markdown(f"**{c.get('doc_title')} — {c.get('section')}** (Score: `{c.get('similarity_score')}`)")
+                                st.caption(c.get("text")[:180] + "...")
 
-                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-                    if st.button("Generate Suggested Response", type="primary", key=f"gen_res_{selected_id}"):
-                        with st.spinner("Retrieving knowledge base and drafting response..."):
+                    if st.button("Generate Suggested Response", type="primary", key=f"gen_tab_btn_{selected_id}"):
+                        with st.spinner("Drafting grounded response..."):
                             ok, res = generate_and_store_response(selected_id)
                             if ok:
-                                st.success("Suggested response drafted successfully.")
+                                st.success("Suggested response drafted.")
                                 st.rerun()
                             else:
                                 st.error(res)
-
-        else:
-            st.error("Selected ticket could not be loaded.")
 
 
 if __name__ == "__main__" or True:

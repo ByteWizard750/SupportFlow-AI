@@ -12,8 +12,9 @@ from services.ticket_service import create_ticket
 def render_new_ticket_page():
     st.title("Create Support Ticket")
     st.caption("Submit a new customer inquiry or incident into the support queue")
+    st.divider()
 
-    # Initialize form success notification state
+    # Form success notification
     if "ticket_created_success" not in st.session_state:
         st.session_state["ticket_created_success"] = None
 
@@ -21,47 +22,48 @@ def render_new_ticket_page():
         st.success(st.session_state["ticket_created_success"])
         st.session_state["ticket_created_success"] = None
 
-    # Form in a bordered container
-    with st.container(border=True):
-        with st.form("new_ticket_form", clear_on_submit=True):
-            st.subheader("Ticket Details")
+    col_form, _ = st.columns([2, 1])
+    with col_form:
+        with st.container(border=True):
+            with st.form("new_ticket_form", clear_on_submit=True):
+                st.subheader("Ticket Details")
 
-            customer_name = st.text_input(
-                "Customer Name *",
-                placeholder="e.g. Jane Doe or Acme Corp",
-                help="Enter the customer or organization name."
-            )
-
-            subject = st.text_input(
-                "Subject *",
-                placeholder="e.g. Unable to process monthly billing invoice",
-                help="A concise summary of the issue or inquiry."
-            )
-
-            description = st.text_area(
-                "Ticket Description *",
-                placeholder="Provide complete details regarding the problem, error messages, or questions...",
-                height=180,
-                help="Detailed description of the customer request."
-            )
-
-            st.divider()
-            submitted = st.form_submit_button("Submit Ticket", type="primary")
-
-            if submitted:
-                success, result = create_ticket(
-                    customer_name=customer_name,
-                    subject=subject,
-                    description=description
+                customer_name = st.text_input(
+                    "Customer Name *",
+                    placeholder="e.g. Jane Doe or Acme Corp",
+                    help="Enter the customer or organization identity."
                 )
 
-                if success:
-                    st.session_state["ticket_created_success"] = (
-                        f"Ticket #{result} created successfully. Status: New."
+                subject = st.text_input(
+                    "Subject *",
+                    placeholder="e.g. Unable to process monthly billing invoice",
+                    help="A concise summary of the issue."
+                )
+
+                description = st.text_area(
+                    "Ticket Description *",
+                    placeholder="Provide complete details regarding the problem, error messages, or questions...",
+                    height=180,
+                    help="Detailed description of the customer request."
+                )
+
+                st.divider()
+                submitted = st.form_submit_button("Submit Ticket", type="primary", use_container_width=True)
+
+                if submitted:
+                    success, result = create_ticket(
+                        customer_name=customer_name,
+                        subject=subject,
+                        description=description
                     )
-                    st.rerun()
-                else:
-                    st.error(result)
+
+                    if success:
+                        st.session_state["ticket_created_success"] = (
+                            f"Ticket #{result} created successfully with status 'New'."
+                        )
+                        st.rerun()
+                    else:
+                        st.error(result)
 
 
 if __name__ == "__main__" or True:

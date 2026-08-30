@@ -16,6 +16,7 @@ from services.ticket_service import get_dashboard_summary
 def render_dashboard():
     st.title("System Dashboard")
     st.caption("Operational overview and recent ticket activity")
+    st.divider()
 
     # Fetch live summary data
     summary = get_dashboard_summary()

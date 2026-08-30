@@ -16,6 +16,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Custom Enterprise CSS for Crisp Alignment & Modern Proportions
+st.markdown(
+    """
+    <style>
+    /* Clean container padding and font baseline */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
+        max-width: 1300px;
+    }
+    
+    /* Harmonize tabs styling */
+    div[data-testid="stTabs"] button {
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    /* Ensure disabled text areas are clean and easily readable */
+    div[data-baseweb="textarea"] textarea:disabled {
+        opacity: 0.92 !important;
+        -webkit-text-fill-color: inherit !important;
+    }
+    
+    /* Streamlit divider alignment */
+    hr {
+        margin: 0.75rem 0 1.25rem 0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Initialize Database Schema
 init_db()
 
