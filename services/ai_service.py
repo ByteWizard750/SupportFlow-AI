@@ -5,6 +5,7 @@ Utilizes Google Gemini LLM with structured schema outputs to analyze support tic
 for Category, Priority, Sentiment, Department routing, and contextual Reasoning.
 """
 
+import time
 from enum import Enum
 from typing import Tuple, Dict, Any, Union
 from pydantic import BaseModel, Field, ValidationError
@@ -95,9 +96,14 @@ Always base your classification strictly on the ticket context, without assuming
 """
 
 
-def analyze_ticket(subject: str, description: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+def analyze_ticket(
+    subject: str,
+    description: str,
+    max_retries: int = 2
+) -> Tuple[bool, Union[Dict[str, Any], str]]:
     """
     Analyzes a support ticket using the Gemini LLM and returns structured classification metadata.
+    Includes automated retry with backoff for transient free-tier rate limits (HTTP 429).
 
     Returns:
         (True, analysis_dict) on success
@@ -117,34 +123,48 @@ Description: {description.strip()}
 
 Analyze the ticket and provide your structured classification."""
 
-    try:
-        client = genai.Client(api_key=api_key)
-        
-        response = client.models.generate_content(
-            model=GEMINI_MODEL_NAME,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=f"{SYSTEM_PROMPT}\n\n{prompt}")]
+    client = genai.Client(api_key=api_key)
+
+    for attempt in range(max_retries + 1):
+        try:
+            response = client.models.generate_content(
+                model=GEMINI_MODEL_NAME,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=f"{SYSTEM_PROMPT}\n\n{prompt}")]
+                    )
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=TicketAnalysisSchema,
+                    temperature=0.1,
                 )
-            ],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=TicketAnalysisSchema,
-                temperature=0.1,
             )
-        )
 
-        if not response.text:
-            return False, "Gemini API returned an empty response."
+            if not response.text:
+                return False, "Gemini API returned an empty response."
 
-        # Validate JSON output using Pydantic
-        parsed_data = TicketAnalysisSchema.model_validate_json(response.text)
-        return True, parsed_data.model_dump()
+            # Validate JSON output using Pydantic
+            parsed_data = TicketAnalysisSchema.model_validate_json(response.text)
+            return True, parsed_data.model_dump()
 
-    except ValidationError as ve:
-        return False, f"Structured output validation error: {str(ve)}"
-    except APIError as ae:
-        return False, f"Gemini API error ({ae.code}): {ae.message}"
-    except Exception as e:
-        return False, f"Unexpected error during AI analysis: {str(e)}"
+        except APIError as ae:
+            # Handle rate limit (429) with retry backoff
+            if ae.code == 429 and attempt < max_retries:
+                time.sleep(4 * (attempt + 1))
+                continue
+            elif ae.code == 429:
+                return False, "Free-tier rate limit reached (20 requests/minute). Please wait ~15 seconds and try again."
+            return False, f"Gemini API error ({ae.code}): {ae.message}"
+        except ValidationError as ve:
+            return False, f"Structured output validation error: {str(ve)}"
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries:
+                time.sleep(4 * (attempt + 1))
+                continue
+            elif "429" in str(e):
+                return False, "Free-tier rate limit reached (20 requests/minute). Please wait ~15 seconds and try again."
+            return False, f"Unexpected error during AI analysis: {str(e)}"
+
+    return False, "Analysis failed after retry attempts."
