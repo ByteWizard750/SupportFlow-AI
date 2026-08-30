@@ -1,9 +1,10 @@
 """
-Dashboard Page for SupportFlow AI (Phase 1).
+Dashboard Page for SupportFlow AI.
 
 Displays metrics calculated directly from database records:
 - Total Tickets
 - New Tickets
+- Operational Status
 and a list of recent tickets.
 """
 
@@ -14,7 +15,7 @@ from services.ticket_service import get_dashboard_summary
 
 def render_dashboard():
     st.title("System Dashboard")
-    st.caption("Real-time operational summary of customer support tickets")
+    st.caption("Operational overview and recent ticket activity")
 
     # Fetch live summary data
     summary = get_dashboard_summary()
@@ -22,7 +23,7 @@ def render_dashboard():
     new_tickets = summary["new_tickets"]
     recent_tickets = summary["recent_tickets"]
 
-    # Native Streamlit Metric Cards Row
+    # Metric Cards Row
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -30,7 +31,7 @@ def render_dashboard():
             st.metric(
                 label="Total Tickets",
                 value=total_tickets,
-                help="All tickets stored in the SQLite database"
+                help="Total tickets registered in the database"
             )
 
     with col2:
@@ -38,7 +39,7 @@ def render_dashboard():
             st.metric(
                 label="New Tickets",
                 value=new_tickets,
-                help="Tickets currently awaiting support agent review"
+                help="Tickets pending review or processing"
             )
 
     with col3:
@@ -46,22 +47,19 @@ def render_dashboard():
             st.metric(
                 label="System Status",
                 value="Operational",
-                help="SQLite Database Connection Active"
+                help="Database and services connected"
             )
 
-    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-
-    # Recent Tickets Section
+    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
     st.subheader("Recent Tickets")
 
     if not recent_tickets:
-        st.info("No support tickets created yet. Use the **New Ticket** page to submit the first ticket.")
+        st.info("No tickets created yet. Navigate to 'New Ticket' to submit a record.")
     else:
-        # Convert to clean dataframe display
         display_data = []
         for t in recent_tickets:
             display_data.append({
-                "Ticket ID": f"#{t['id']}",
+                "ID": f"#{t['id']}",
                 "Customer": t["customer_name"],
                 "Subject": t["subject"],
                 "Status": t["status"],
@@ -70,14 +68,13 @@ def render_dashboard():
         df = pd.DataFrame(display_data)
         st.dataframe(
             df,
-            use_container_width=True,
             hide_index=True,
             column_config={
-                "Ticket ID": st.column_config.TextColumn("ID", width="small"),
-                "Customer": st.column_config.TextColumn("Customer Name", width="medium"),
+                "ID": st.column_config.TextColumn("ID", width="small"),
+                "Customer": st.column_config.TextColumn("Customer", width="medium"),
                 "Subject": st.column_config.TextColumn("Subject", width="large"),
                 "Status": st.column_config.TextColumn("Status", width="small"),
-                "Created At": st.column_config.TextColumn("Date / Time", width="medium"),
+                "Created At": st.column_config.TextColumn("Timestamp", width="medium"),
             }
         )
 

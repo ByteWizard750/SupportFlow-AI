@@ -1,5 +1,5 @@
 """
-New Ticket Submission Page for SupportFlow AI (Phase 1).
+New Ticket Submission Page for SupportFlow AI.
 
 Allows customers / support representatives to submit a new support ticket.
 Validates input fields and persists the record to the SQLite database.
@@ -24,12 +24,12 @@ def render_new_ticket_page():
     # Form in a bordered container
     with st.container(border=True):
         with st.form("new_ticket_form", clear_on_submit=True):
-            st.subheader("Ticket Information")
+            st.subheader("Ticket Details")
 
             customer_name = st.text_input(
                 "Customer Name *",
                 placeholder="e.g. Jane Doe or Acme Corp",
-                help="Enter the full name or company identity of the customer submitting the ticket."
+                help="Enter the customer or organization name."
             )
 
             subject = st.text_input(
@@ -42,7 +42,7 @@ def render_new_ticket_page():
                 "Ticket Description *",
                 placeholder="Provide complete details regarding the problem, error messages, or questions...",
                 height=180,
-                help="Detailed description of the customer's request."
+                help="Detailed description of the customer request."
             )
 
             st.divider()
@@ -57,11 +57,11 @@ def render_new_ticket_page():
 
                 if success:
                     st.session_state["ticket_created_success"] = (
-                        f"✅ Ticket #{result} created successfully with status 'New'."
+                        f"Ticket #{result} created successfully. Status: New."
                     )
                     st.rerun()
                 else:
-                    st.error(f"❌ {result}")
+                    st.error(result)
 
 
 if __name__ == "__main__" or True:

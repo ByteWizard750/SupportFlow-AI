@@ -1,5 +1,5 @@
 """
-SupportFlow AI — Main Application Entry Point (Phase 1).
+SupportFlow AI — Main Application Entry Point.
 
 Configures Streamlit page setup, modern page navigation,
 and database initialization.
@@ -11,7 +11,6 @@ from database.database import init_db
 # Page Configuration
 st.set_page_config(
     page_title="SupportFlow AI",
-    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -21,8 +20,8 @@ init_db()
 
 # Sidebar Header Branding
 with st.sidebar:
-    st.title("⚡ SupportFlow AI")
-    st.caption("Phase 1: Application Foundation")
+    st.markdown("### SupportFlow AI")
+    st.caption("AI-Powered Support Operations")
     st.divider()
 
 # Page Navigation Setup
@@ -36,13 +35,13 @@ dashboard_page = st.Page(
 new_ticket_page = st.Page(
     "pages/new_ticket.py",
     title="New Ticket",
-    icon=":material/add_circle:"
+    icon=":material/add_box:"
 )
 
 tickets_page = st.Page(
     "pages/tickets.py",
     title="Ticket Queue",
-    icon=":material/format_list_bulleted:"
+    icon=":material/table_rows:"
 )
 
 # Run Navigation
