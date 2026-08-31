@@ -16,14 +16,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Enterprise CSS for Balanced Margins & Zero Top Collision
+# Custom Enterprise CSS for Balanced Margins, Compact Spacing & Zero Overflow
 st.markdown(
     """
     <style>
     /* Centered responsive container with equal left & right margins */
     .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 2.5rem;
+        padding-top: 1.25rem;
+        padding-bottom: 2rem;
         padding-left: 2rem;
         padding-right: 2rem;
         max-width: 1280px;
@@ -33,8 +33,38 @@ st.markdown(
     
     /* Clean divider baseline */
     hr {
-        margin: 0.6rem 0 1rem 0;
+        margin: 0.5rem 0 0.85rem 0;
         border-color: rgba(255, 255, 255, 0.08);
+    }
+    
+    /* Custom Compact KPI Card styling */
+    .sf-kpi-card {
+        background-color: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 86px;
+    }
+    .sf-kpi-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .sf-kpi-val {
+        font-size: 1.55rem;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+    .sf-kpi-sub {
+        font-size: 0.72rem;
+        color: #64748b;
     }
     
     /* Harmonize expander styling */
@@ -57,7 +87,7 @@ try:
 except Exception as e:
     print(f"[WARN] Vector index auto-build deferred: {e}")
 
-# Sidebar Header Branding
+# Sidebar Header Branding & Status
 with st.sidebar:
     st.markdown("### SupportFlow AI")
     st.caption("AI-Powered Support Operations")
@@ -90,3 +120,16 @@ pg = st.navigation({
 })
 
 pg.run()
+
+# Subtle sidebar environment indicator at bottom
+with st.sidebar:
+    st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="font-size: 0.72rem; color: #475569; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 0.8rem;">
+            <div>SupportFlow AI v1.4.0</div>
+            <div style="color: #334155; margin-top: 2px;">SQLite • Gemini Flash • FAISS</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
