@@ -38,6 +38,16 @@ from .agent_service import (
     get_agent_workspace_data,
     VALID_STATUSES,
 )
+from .sla_service import (
+    get_sla_target_hours,
+    calculate_sla_status,
+    calculate_sla_metrics,
+    format_sla_duration,
+    get_escalation_recommendation,
+    get_sla_dashboard_data,
+    SLA_TARGET_HOURS,
+    AT_RISK_THRESHOLD,
+)
 
 __all__ = [
     "validate_ticket_input",
@@ -67,4 +77,12 @@ __all__ = [
     "validate_status_transition",
     "get_agent_workspace_data",
     "VALID_STATUSES",
+    "get_sla_target_hours",
+    "calculate_sla_status",
+    "calculate_sla_metrics",
+    "format_sla_duration",
+    "get_escalation_recommendation",
+    "get_sla_dashboard_data",
+    "SLA_TARGET_HOURS",
+    "AT_RISK_THRESHOLD",
 ]

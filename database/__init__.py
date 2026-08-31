@@ -26,6 +26,12 @@ from .database import (
     get_daily_ticket_volume,
     get_urgent_tickets,
     get_recent_activity,
+    get_all_tickets_with_sla,
+    get_ticket_sla_status,
+    get_sla_summary,
+    get_at_risk_tickets,
+    get_sla_breached_tickets,
+    get_escalation_queue_tickets,
 )
 
 __all__ = [
@@ -53,4 +59,10 @@ __all__ = [
     "get_daily_ticket_volume",
     "get_urgent_tickets",
     "get_recent_activity",
+    "get_all_tickets_with_sla",
+    "get_ticket_sla_status",
+    "get_sla_summary",
+    "get_at_risk_tickets",
+    "get_sla_breached_tickets",
+    "get_escalation_queue_tickets",
 ]

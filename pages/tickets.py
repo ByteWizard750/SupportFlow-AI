@@ -2,20 +2,22 @@
 Tickets Queue and Detail Inspector for SupportFlow AI.
 
 Full-width stacked cockpit layout:
-- Top Section: Header with Stats, Search, Status Filter, Ticket Selector & Overview Queue Table
-- Bottom Section: Ticket Details, AI Triage Intelligence, Grounded Resolution & Human Agent Review Workflow
+- Top Section: Header with Stats, Search, Status Filter, SLA Filter, Ticket Selector & Overview Queue Table
+- Bottom Section: Ticket Details, AI Triage Intelligence, Deterministic SLA Monitoring, Grounded Resolution & Human Agent Review
 """
 
 import streamlit as st
 import pandas as pd
+from database.database import (
+    get_all_tickets_with_sla,
+    get_ticket_sla_status,
+)
 from services.ticket_service import (
-    get_all_tickets,
-    get_ticket_by_id,
-    get_ticket_analysis,
     analyze_and_store_ticket,
     retrieve_ticket_knowledge,
     generate_and_store_response,
     get_ticket_suggested_response,
+    get_ticket_analysis,
 )
 from services.agent_service import (
     save_agent_draft,
@@ -35,8 +37,19 @@ def get_status_badge(status: str) -> str:
     return '<span style="background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">New</span>'
 
 
+def get_sla_badge(sla_status: str) -> str:
+    s = (sla_status or "On Track").strip()
+    if s == "Breached":
+        return '<span style="background-color: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.38); padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;">🔴 Breached</span>'
+    elif s == "At Risk":
+        return '<span style="background-color: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.38); padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;">🟡 At Risk</span>'
+    elif s == "Met":
+        return '<span style="background-color: rgba(59, 130, 246, 0.18); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.35); padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;">⚪ Met</span>'
+    return '<span style="background-color: rgba(34, 197, 94, 0.18); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;">🟢 On Track</span>'
+
+
 def get_priority_badge(priority: str) -> str:
-    p = priority.lower()
+    p = (priority or "medium").lower()
     if p == "critical":
         color = "#f87171"
         bg = "rgba(239, 68, 68, 0.15)"
@@ -57,7 +70,7 @@ def get_priority_badge(priority: str) -> str:
 
 
 def get_sentiment_badge(sentiment: str) -> str:
-    s = sentiment.lower()
+    s = (sentiment or "neutral").lower()
     if s == "positive":
         color = "#4ade80"
         bg = "rgba(34, 197, 94, 0.15)"
@@ -78,31 +91,43 @@ def get_sentiment_badge(sentiment: str) -> str:
 
 
 def render_tickets_page():
-    tickets = get_all_tickets()
+    tickets = get_all_tickets_with_sla()
     analyzed_count = sum(1 for t in tickets if t["status"] == "AI Analyzed") if tickets else 0
     resolved_count = sum(1 for t in tickets if t["status"] == "Resolved") if tickets else 0
+    breached_count = sum(1 for t in tickets if t["status"] != "Resolved" and t["sla_status"] == "Breached") if tickets else 0
+    at_risk_count = sum(1 for t in tickets if t["status"] != "Resolved" and t["sla_status"] == "At Risk") if tickets else 0
 
     # Non-colliding Top Header Row
     st.title("Ticket Queue")
-    st.caption("Inspect, triage, review AI suggested responses, and resolve customer support tickets")
+    st.caption("Inspect, triage, monitor SLA deadlines, review AI responses, and resolve customer support tickets")
 
-    # Clean Inline Counter Badges
-    st.markdown(
-        f"""
-        <div style="display: flex; gap: 8px; margin-top: 4px; margin-bottom: 8px;">
-            <span style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #94a3b8;">
-                Total: <b style="color: #f1f5f9;">{len(tickets)}</b>
-            </span>
-            <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #4ade80;">
-                AI Analyzed: <b>{analyzed_count}</b>
-            </span>
-            <span style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #34d399;">
-                Resolved: <b>{resolved_count}</b>
-            </span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Clean Inline Counter Badges with SLA status awareness
+    badge_html = f"""
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; margin-bottom: 8px;">
+        <span style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #94a3b8;">
+            Total: <b style="color: #f1f5f9;">{len(tickets)}</b>
+        </span>
+        <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #4ade80;">
+            AI Analyzed: <b>{analyzed_count}</b>
+        </span>
+        <span style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #34d399;">
+            Resolved: <b>{resolved_count}</b>
+        </span>
+    """
+    if at_risk_count > 0:
+        badge_html += f"""
+        <span style="background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #fbbf24;">
+            🟡 At Risk: <b>{at_risk_count}</b>
+        </span>
+        """
+    if breached_count > 0:
+        badge_html += f"""
+        <span style="background-color: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #f87171;">
+            🔴 Breached: <b>{breached_count}</b>
+        </span>
+        """
+    badge_html += "</div>"
+    st.markdown(badge_html, unsafe_allow_html=True)
 
     st.divider()
 
@@ -111,20 +136,28 @@ def render_tickets_page():
         return
 
     # ==================== TOP SECTION: TICKET QUEUE OVERVIEW ====================
-    t_search_col, t_filter_col, t_select_col = st.columns([1.5, 1, 2], gap="medium")
+    t_search_col, t_status_col, t_sla_col, t_select_col = st.columns([1.3, 0.9, 0.9, 1.8], gap="small")
 
     with t_search_col:
         search_query = st.text_input(
             "Search",
-            placeholder="Search by keyword or customer...",
+            placeholder="Search keyword or customer...",
             label_visibility="collapsed"
         )
 
-    with t_filter_col:
+    with t_status_col:
         all_possible_statuses = ["All Statuses", "New", "AI Analyzed", "In Progress", "Resolved"]
         selected_status = st.selectbox(
             "Status Filter",
             options=all_possible_statuses,
+            label_visibility="collapsed"
+        )
+
+    with t_sla_col:
+        sla_filter_options = ["All SLA Statuses", "On Track", "At Risk", "Breached", "Met"]
+        selected_sla = st.selectbox(
+            "SLA Filter",
+            options=sla_filter_options,
             label_visibility="collapsed"
         )
 
@@ -137,19 +170,22 @@ def render_tickets_page():
             if q in str(t["id"]).lower()
             or q in t["customer_name"].lower()
             or q in t["subject"].lower()
-            or q in t["description"].lower()
+            or q in t.get("description", "").lower()
         ]
 
     if selected_status != "All Statuses":
         filtered = [t for t in filtered if t["status"] == selected_status]
 
+    if selected_sla != "All SLA Statuses":
+        filtered = [t for t in filtered if t["sla_status"] == selected_sla]
+
     if not filtered:
-        st.warning(f"No tickets match the selected filter ('{selected_status}').")
+        st.warning(f"No tickets match the selected filters.")
         return
 
     # Synchronized Ticket Selector Dropdown
     ticket_options = {
-        f"#{t['id']} — {t['subject'][:45]}... ({t['customer_name']})": t["id"]
+        f"#{t['id']} [{t.get('priority', 'Medium')}] {t['subject'][:38]}... ({t['sla_status']})": t["id"]
         for t in filtered
     }
 
@@ -170,12 +206,17 @@ def render_tickets_page():
     # Queue Table across Full Width
     table_rows = []
     for t in filtered:
+        sla_s = t.get("sla_status", "On Track")
+        sla_icon = "🔴" if sla_s == "Breached" else "🟡" if sla_s == "At Risk" else "⚪" if sla_s == "Met" else "🟢"
+        rem_str = t.get("formatted_remaining", "N/A") if t["status"] != "Resolved" else f"Met ({t.get('formatted_elapsed', '')})"
         table_rows.append({
             "ID": f"#{t['id']}",
             "Customer": t["customer_name"],
             "Subject": t["subject"],
+            "Priority": t.get("priority", "Medium"),
             "Status": t["status"],
-            "Submitted": t["created_at"],
+            "SLA": f"{sla_icon} {sla_s}",
+            "Time Left": rem_str,
         })
     df = pd.DataFrame(table_rows)
     st.dataframe(
@@ -184,18 +225,20 @@ def render_tickets_page():
         use_container_width=True,
         height=200,
         column_config={
-            "ID": st.column_config.TextColumn("ID", width=60),
-            "Customer": st.column_config.TextColumn("Customer", width=150),
+            "ID": st.column_config.TextColumn("ID", width=55),
+            "Customer": st.column_config.TextColumn("Customer", width=130),
             "Subject": st.column_config.TextColumn("Subject", width="large"),
-            "Status": st.column_config.TextColumn("Status", width=110),
-            "Submitted": st.column_config.TextColumn("Submitted", width=160),
+            "Priority": st.column_config.TextColumn("Priority", width=80),
+            "Status": st.column_config.TextColumn("Status", width=95),
+            "SLA": st.column_config.TextColumn("SLA Status", width=110),
+            "Time Left": st.column_config.TextColumn("Time Left", width=110),
         }
     )
 
     st.markdown("<div style='height: 0.4rem;'></div>", unsafe_allow_html=True)
 
     # ==================== BOTTOM SECTION: TICKET DETAIL & WORKSPACE ====================
-    ticket = get_ticket_by_id(selected_id)
+    ticket = get_ticket_sla_status(selected_id)
     if not ticket:
         st.error("Selected ticket could not be loaded.")
         return
@@ -208,12 +251,20 @@ def render_tickets_page():
     # Main Detail Workspace Container
     with st.container(border=True):
         # 1. Ticket Header Banner
-        h_col1, h_col2 = st.columns([3.8, 1.2])
+        h_col1, h_col2 = st.columns([3.4, 1.6])
         with h_col1:
             st.markdown(f"<h3 style='margin: 0 0 2px 0; font-size: 1.25rem;'>Ticket #{ticket['id']}: {ticket['subject']}</h3>", unsafe_allow_html=True)
             st.markdown(f"<div style='font-size: 0.82rem; color: #94a3b8;'>Customer: <b style='color: #f1f5f9;'>{ticket['customer_name']}</b> &nbsp;•&nbsp; Submitted: <b>{ticket['created_at']}</b></div>", unsafe_allow_html=True)
         with h_col2:
-            st.markdown(f"<div style='text-align: right; padding-top: 4px;'>{get_status_badge(ticket['status'])}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div style='text-align: right; padding-top: 4px; display: flex; justify-content: flex-end; gap: 6px;'>
+                    {get_status_badge(ticket['status'])}
+                    {get_sla_badge(ticket['sla_status'])}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
         st.divider()
 
@@ -226,7 +277,58 @@ def render_tickets_page():
 
         st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
 
-        # 3. AI Intelligence Triage
+        # 3. SLA Monitoring & Intelligent Escalation (Phase 6)
+        st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px;'>SLA Monitoring & Escalation</div>", unsafe_allow_html=True)
+        
+        sla_m1, sla_m2, sla_m3, sla_m4, sla_m5 = st.columns(5)
+        with sla_m1:
+            st.markdown(f"<div style='font-size: 0.72rem; color: #94a3b8;'>PRIORITY</div><div style='margin-top: 2px;'>{get_priority_badge(ticket.get('priority', 'Medium'))}</div>", unsafe_allow_html=True)
+        with sla_m2:
+            st.markdown(f"<div style='font-size: 0.72rem; color: #94a3b8;'>SLA TARGET</div><div style='font-size: 0.9rem; font-weight: 600; color: #f1f5f9;'>{ticket['sla_target_hours']} hours</div>", unsafe_allow_html=True)
+        with sla_m3:
+            st.markdown(f"<div style='font-size: 0.72rem; color: #94a3b8;'>ELAPSED TIME</div><div style='font-size: 0.9rem; font-weight: 600; color: #f1f5f9;'>{ticket['formatted_elapsed']}</div>", unsafe_allow_html=True)
+        with sla_m4:
+            rem_label = "REMAINING TIME" if ticket["remaining_hours"] >= 0 else "OVERDUE DURATION"
+            rem_color = "#f87171" if ticket["remaining_hours"] < 0 else "#fbbf24" if ticket["sla_status"] == "At Risk" else "#4ade80"
+            st.markdown(f"<div style='font-size: 0.72rem; color: #94a3b8;'>{rem_label}</div><div style='font-size: 0.9rem; font-weight: 600; color: {rem_color};'>{ticket['formatted_remaining']}</div>", unsafe_allow_html=True)
+        with sla_m5:
+            st.markdown(f"<div style='font-size: 0.72rem; color: #94a3b8;'>SLA STATUS</div><div style='margin-top: 2px;'>{get_sla_badge(ticket['sla_status'])}</div>", unsafe_allow_html=True)
+
+        # Escalation Recommendation Banner
+        rec_text = ticket.get("escalation_recommendation", "Operating within normal parameters.")
+        if ticket["sla_status"] == "Breached":
+            banner_bg = "rgba(239, 68, 68, 0.08)"
+            banner_border = "rgba(239, 68, 68, 0.3)"
+            banner_color = "#fca5a5"
+            banner_icon = "🚨"
+        elif ticket["sla_status"] == "At Risk":
+            banner_bg = "rgba(245, 158, 11, 0.08)"
+            banner_border = "rgba(245, 158, 11, 0.3)"
+            banner_color = "#fcd34d"
+            banner_icon = "⚠️"
+        elif ticket["sla_status"] == "Met":
+            banner_bg = "rgba(59, 130, 246, 0.08)"
+            banner_border = "rgba(59, 130, 246, 0.25)"
+            banner_color = "#bfdbfe"
+            banner_icon = "✓"
+        else:
+            banner_bg = "rgba(34, 197, 94, 0.06)"
+            banner_border = "rgba(34, 197, 94, 0.2)"
+            banner_color = "#86efac"
+            banner_icon = "🟢"
+
+        st.markdown(
+            f"""
+            <div style="background-color: {banner_bg}; border: 1px solid {banner_border}; border-radius: 6px; padding: 9px 12px; margin-top: 8px; font-size: 0.84rem; color: {banner_color};">
+                <b>{banner_icon} Escalation Recommendation:</b> {rec_text}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.divider()
+
+        # 4. AI Intelligence Triage
         ai_hdr_col1, ai_hdr_col2 = st.columns([4.2, 1])
         with ai_hdr_col1:
             st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; padding-top: 4px;'>AI Triage Intelligence</div>", unsafe_allow_html=True)
@@ -268,7 +370,7 @@ def render_tickets_page():
 
         st.divider()
 
-        # 4. Grounded AI Resolution (RAG)
+        # 5. Grounded AI Resolution (RAG)
         r_hdr_col1, r_hdr_col2 = st.columns([4.2, 1])
         with r_hdr_col1:
             st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase;'>Suggested Resolution (Grounded RAG)</div>", unsafe_allow_html=True)
@@ -286,7 +388,6 @@ def render_tickets_page():
 
         if suggested_res:
             st.markdown("<div style='height: 0.25rem;'></div>", unsafe_allow_html=True)
-            # Full-Width Resolution Draft Display
             st.markdown(
                 f"""<div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 6px; padding: 12px 14px; font-size: 0.88rem; line-height: 1.6; color: #f1f5f9; white-space: pre-wrap;">{suggested_res['suggested_response']}</div>""",
                 unsafe_allow_html=True
@@ -334,7 +435,7 @@ def render_tickets_page():
 
         st.divider()
 
-        # ==================== 5. HUMAN-IN-THE-LOOP: AGENT REVIEW & RESOLUTION ====================
+        # ==================== 6. HUMAN-IN-THE-LOOP: AGENT REVIEW & RESOLUTION ====================
         st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase;'>Agent Review & Resolution</div>", unsafe_allow_html=True)
         st.markdown("<div style='font-size: 0.78rem; color: #64748b; margin-bottom: 8px;'>Review, edit, and approve the final response before resolving the ticket</div>", unsafe_allow_html=True)
 
@@ -389,7 +490,7 @@ def render_tickets_page():
             st.markdown(
                 f"""
                 <div style="background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #6ee7b7;">
-                    <b>Ticket Resolved</b> • Resolution approved at {resolution_rec.get('resolved_at', 'Recorded')}
+                    <b>Ticket Resolved</b> • Resolution approved at {resolution_rec.get('resolved_at', 'Recorded')} • SLA {ticket['sla_status']}
                 </div>
                 """,
                 unsafe_allow_html=True

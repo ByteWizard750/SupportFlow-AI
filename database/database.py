@@ -640,3 +640,196 @@ def get_recent_activity(limit: int = 5, db_path: Optional[str] = None) -> List[D
             (limit,)
         )
         return [dict(r) for r in cursor.fetchall()]
+
+
+# ==================== PHASE 6: SLA MONITORING & ESCALATION ====================
+
+def get_all_tickets_with_sla(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Fetches all tickets joined with their AI analyses and resolution records,
+    enriched dynamically with complete deterministic SLA metrics.
+    """
+    from services.sla_service import calculate_sla_metrics
+
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                t.id, 
+                t.customer_name, 
+                t.subject, 
+                t.description, 
+                t.status, 
+                t.created_at, 
+                ta.category, 
+                COALESCE(ta.priority, 'Medium') AS priority, 
+                COALESCE(ta.department, 'Support') AS department, 
+                ta.sentiment, 
+                ta.reasoning, 
+                tr.agent_response, 
+                tr.resolved_at
+            FROM tickets t
+            LEFT JOIN ticket_analyses ta ON t.id = ta.ticket_id
+            LEFT JOIN ticket_resolutions tr ON t.id = tr.ticket_id
+            ORDER BY t.created_at DESC, t.id DESC;
+            """
+        )
+        rows = cursor.fetchall()
+        return [calculate_sla_metrics(dict(row)) for row in rows]
+
+
+def get_ticket_sla_status(ticket_id: int, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves full deterministic SLA status and metrics for a specific ticket.
+    """
+    from services.sla_service import calculate_sla_metrics
+
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                t.id, 
+                t.customer_name, 
+                t.subject, 
+                t.description, 
+                t.status, 
+                t.created_at, 
+                ta.category, 
+                COALESCE(ta.priority, 'Medium') AS priority, 
+                COALESCE(ta.department, 'Support') AS department, 
+                ta.sentiment, 
+                ta.reasoning, 
+                tr.agent_response, 
+                tr.resolved_at
+            FROM tickets t
+            LEFT JOIN ticket_analyses ta ON t.id = ta.ticket_id
+            LEFT JOIN ticket_resolutions tr ON t.id = tr.ticket_id
+            WHERE t.id = ?;
+            """,
+            (ticket_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return calculate_sla_metrics(dict(row))
+
+
+def get_sla_summary(db_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Calculates deterministic SLA summary statistics across all tickets:
+    - total_open_tickets
+    - on_track_count
+    - at_risk_count
+    - breached_count
+    - resolved_within_sla (Met)
+    - resolved_after_sla (Breached after target)
+    - total_resolved_tickets
+    - sla_compliance_rate_pct
+    - sla_status_distribution
+    """
+    all_tickets = get_all_tickets_with_sla(db_path=db_path)
+
+    open_tickets = [t for t in all_tickets if t["status"] != "Resolved"]
+    resolved_tickets = [t for t in all_tickets if t["status"] == "Resolved"]
+
+    on_track_count = sum(1 for t in open_tickets if t["sla_status"] == "On Track")
+    at_risk_count = sum(1 for t in open_tickets if t["sla_status"] == "At Risk")
+    breached_count = sum(1 for t in open_tickets if t["sla_status"] == "Breached")
+
+    resolved_within_sla = sum(1 for t in resolved_tickets if t["sla_status"] == "Met")
+    resolved_after_sla = sum(1 for t in resolved_tickets if t["sla_status"] == "Breached")
+    total_resolved = len(resolved_tickets)
+
+    if total_resolved > 0:
+        compliance_rate = round((resolved_within_sla / total_resolved) * 100.0, 1)
+    else:
+        compliance_rate = 100.0 if not open_tickets else 0.0
+
+    return {
+        "total_tickets": len(all_tickets),
+        "total_open_tickets": len(open_tickets),
+        "on_track_count": on_track_count,
+        "at_risk_count": at_risk_count,
+        "breached_count": breached_count,
+        "resolved_within_sla": resolved_within_sla,
+        "resolved_after_sla": resolved_after_sla,
+        "total_resolved_tickets": total_resolved,
+        "sla_compliance_rate_pct": compliance_rate,
+        "sla_status_distribution": [
+            {"status": "On Track", "count": on_track_count},
+            {"status": "At Risk", "count": at_risk_count},
+            {"status": "Breached", "count": breached_count},
+            {"status": "Met", "count": resolved_within_sla},
+        ]
+    }
+
+
+def get_at_risk_tickets(limit: int = 10, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Returns unresolved tickets where SLA consumption is >= 75% and not yet breached,
+    ordered by highest priority and least remaining time.
+    """
+    all_tickets = get_all_tickets_with_sla(db_path=db_path)
+    at_risk = [t for t in all_tickets if t["status"] != "Resolved" and t["sla_status"] == "At Risk"]
+
+    priority_weights = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
+    at_risk.sort(key=lambda x: (-priority_weights.get(x.get("priority", "Medium"), 2), x.get("remaining_hours", 0)))
+    return at_risk[:limit]
+
+
+def get_sla_breached_tickets(limit: int = 10, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Returns unresolved tickets that have exceeded their SLA target deadline,
+    sorted by longest breach duration (most overdue) first.
+    """
+    all_tickets = get_all_tickets_with_sla(db_path=db_path)
+    breached = [t for t in all_tickets if t["status"] != "Resolved" and t["sla_status"] == "Breached"]
+    breached.sort(key=lambda x: x.get("remaining_hours", 0))  # Most negative remaining_hours first
+    return breached[:limit]
+
+
+def get_escalation_queue_tickets(limit: int = 10, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Returns prioritized escalation queue of breached and at-risk tickets,
+    ordered strictly by severity hierarchy:
+    1. Critical Breached
+    2. High Breached
+    3. Critical At Risk
+    4. High At Risk
+    5. Medium Breached
+    6. Medium At Risk
+    7. Low Breached
+    8. Low At Risk
+    """
+    all_tickets = get_all_tickets_with_sla(db_path=db_path)
+    escalated = [
+        t for t in all_tickets 
+        if t["status"] != "Resolved" and t["sla_status"] in ("Breached", "At Risk")
+    ]
+
+    def escalation_tier(t: Dict[str, Any]) -> int:
+        p = t.get("priority", "Medium")
+        s = t.get("sla_status", "On Track")
+        if p == "Critical" and s == "Breached":
+            return 1
+        elif p == "High" and s == "Breached":
+            return 2
+        elif p == "Critical" and s == "At Risk":
+            return 3
+        elif p == "High" and s == "At Risk":
+            return 4
+        elif p == "Medium" and s == "Breached":
+            return 5
+        elif p == "Medium" and s == "At Risk":
+            return 6
+        elif p == "Low" and s == "Breached":
+            return 7
+        elif p == "Low" and s == "At Risk":
+            return 8
+        return 9
+
+    escalated.sort(key=lambda x: (escalation_tier(x), x.get("remaining_hours", 0)))
+    return escalated[:limit]
+
