@@ -132,21 +132,19 @@ def render_sentiment_chart(df: pd.DataFrame):
 
 def render_dashboard():
     # 1. Top Header
-    hdr_left, hdr_right = st.columns([3, 1.2])
-    with hdr_left:
-        st.title("Support Intelligence")
-        st.caption("AI-powered operational analytics and workload triage for your support workflow")
-    with hdr_right:
-        st.markdown(
-            """
-            <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%; padding-top: 10px;">
-                <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.76rem; color: #4ade80; font-weight: 500;">
-                    Live SQL Analytics
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    st.title("Support Intelligence")
+    st.caption("AI-powered operational analytics and workload triage for your support workflow")
+
+    st.markdown(
+        """
+        <div style="display: flex; gap: 8px; margin-top: 4px; margin-bottom: 8px;">
+            <span style="background-color: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.28); border-radius: 6px; padding: 3px 10px; font-size: 0.78rem; color: #4ade80; font-weight: 600; letter-spacing: 0.02em;">
+                Live SQL Analytics
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.divider()
 
