@@ -2,8 +2,8 @@
 Tickets Queue and Detail Inspector for SupportFlow AI.
 
 Provides an enterprise-grade ticket management workspace with:
-- Searchable and filterable ticket queue
-- Full-width inspection cockpit
+- Searchable and filterable ticket queue (balanced 36% / 64% proportions)
+- Compact, high-readability ticket inspector
 - Real-time AI ticket triage intelligence
 - Grounded RAG suggested resolution drafting with deterministic source attribution
 """
@@ -70,18 +70,26 @@ def get_sentiment_badge(sentiment: str) -> str:
 
 
 def render_tickets_page():
-    # Compact Header Bar
-    hdr_left, hdr_right = st.columns([3, 1])
+    tickets = get_all_tickets()
+    analyzed_count = sum(1 for t in tickets if t["status"] == "AI Analyzed") if tickets else 0
+
+    # Top Header Row with Resilient Stats Badges
+    hdr_left, hdr_right = st.columns([2.4, 1.6])
     with hdr_left:
         st.title("Ticket Queue")
         st.caption("Inspect, triage, and resolve customer support tickets with AI intelligence and grounded knowledge base suggestions")
     with hdr_right:
-        tickets = get_all_tickets()
-        analyzed_count = sum(1 for t in tickets if t["status"] == "AI Analyzed") if tickets else 0
         st.markdown(
-            f"""<div style="text-align: right; padding-top: 14px; font-size: 0.85rem; color: #94a3b8;">
-                Total Tickets: <b>{len(tickets)}</b> &nbsp;|&nbsp; Analyzed: <b style="color: #4ade80;">{analyzed_count}</b>
-            </div>""",
+            f"""
+            <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%; padding-top: 14px; gap: 8px; flex-wrap: wrap;">
+                <span style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; color: #94a3b8;">
+                    Total: <b style="color: #f1f5f9;">{len(tickets)}</b>
+                </span>
+                <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; color: #4ade80;">
+                    Analyzed: <b>{analyzed_count}</b>
+                </span>
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
@@ -91,17 +99,17 @@ def render_tickets_page():
         st.info("No support tickets found in the database. Navigate to 'New Ticket' to create one.")
         return
 
-    # Two-Column Layout (Left: Queue, Right: Details) with Tight Proportions
-    col_queue, col_inspector = st.columns([1, 2.3], gap="medium")
+    # Two-Column Cockpit Layout (~36% Queue / ~64% Details)
+    col_queue, col_inspector = st.columns([1, 1.75], gap="medium")
 
-    # ==================== LEFT COLUMN: QUEUE ====================
+    # ==================== LEFT COLUMN: TICKET QUEUE ====================
     with col_queue:
-        # Search & Filter in a single compact row
-        q_search_col, q_filter_col = st.columns([1.6, 1])
+        # Search & Filter cleanly aligned in one row
+        q_search_col, q_filter_col = st.columns([2.1, 1.2], gap="small")
         with q_search_col:
             search_query = st.text_input(
                 "Search",
-                placeholder="Search tickets...",
+                placeholder="Search tickets by keyword...",
                 label_visibility="collapsed"
             )
         with q_filter_col:
@@ -131,9 +139,9 @@ def render_tickets_page():
             st.warning("No tickets match the search criteria.")
             return
 
-        # Synchronized Ticket Selector
+        # Synchronized Ticket Selector with Extended Visible Subject
         ticket_options = {
-            f"#{t['id']} — {t['subject'][:28]}... ({t['customer_name']})": t["id"]
+            f"#{t['id']} — {t['subject'][:38]}... ({t['customer_name']})": t["id"]
             for t in filtered
         }
 
@@ -150,7 +158,7 @@ def render_tickets_page():
         selected_id = ticket_options[selected_label]
         st.session_state["active_ticket_id"] = selected_id
 
-        # Queue Summary Table
+        # Queue Summary Table with Generous Subject Column
         table_rows = []
         for t in filtered:
             table_rows.append({
@@ -164,12 +172,12 @@ def render_tickets_page():
             df,
             hide_index=True,
             use_container_width=True,
-            height=460,
+            height=380,
             column_config={
-                "ID": st.column_config.TextColumn("ID", width=50),
-                "Customer": st.column_config.TextColumn("Customer", width=105),
-                "Subject": st.column_config.TextColumn("Subject", width=170),
-                "Status": st.column_config.TextColumn("Status", width=85),
+                "ID": st.column_config.TextColumn("ID", width=45),
+                "Customer": st.column_config.TextColumn("Customer", width=115),
+                "Subject": st.column_config.TextColumn("Subject", width=220),
+                "Status": st.column_config.TextColumn("Status", width=90),
             }
         )
 
@@ -189,7 +197,7 @@ def render_tickets_page():
             # 1. Ticket Header Banner
             h_col1, h_col2 = st.columns([3.8, 1.2])
             with h_col1:
-                st.markdown(f"<h3 style='margin: 0 0 2px 0; font-size: 1.2rem; line-height: 1.3;'>Ticket #{ticket['id']}: {ticket['subject']}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='margin: 0 0 2px 0; font-size: 1.18rem; line-height: 1.3;'>Ticket #{ticket['id']}: {ticket['subject']}</h3>", unsafe_allow_html=True)
                 st.markdown(f"<div style='font-size: 0.8rem; color: #94a3b8;'>Customer: <b style='color: #f1f5f9;'>{ticket['customer_name']}</b> &nbsp;•&nbsp; Submitted: <b>{ticket['created_at']}</b></div>", unsafe_allow_html=True)
             with h_col2:
                 st.markdown(f"<div style='text-align: right; padding-top: 2px;'>{get_status_badge(ticket['status'])}</div>", unsafe_allow_html=True)
@@ -203,10 +211,10 @@ def render_tickets_page():
                 unsafe_allow_html=True
             )
 
-            st.markdown("<div style='height: 0.6rem;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
 
             # 3. AI Intelligence Triage
-            ai_hdr_col1, ai_hdr_col2 = st.columns([3.8, 1.2])
+            ai_hdr_col1, ai_hdr_col2 = st.columns([4.4, 1.1])
             with ai_hdr_col1:
                 st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; padding-top: 4px;'>AI Triage Intelligence</div>", unsafe_allow_html=True)
             with ai_hdr_col2:
@@ -221,7 +229,7 @@ def render_tickets_page():
                                 st.error(res)
 
             if analysis:
-                st.markdown("<div style='height: 0.2rem;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='height: 0.15rem;'></div>", unsafe_allow_html=True)
                 m1, m2, m3, m4 = st.columns(4)
                 with m1:
                     st.markdown(f"<div style='font-size: 0.7rem; color: #94a3b8;'>CATEGORY</div><div style='font-size: 0.85rem; font-weight: 600; color: #f1f5f9;'>{analysis['category']}</div>", unsafe_allow_html=True)
@@ -232,7 +240,7 @@ def render_tickets_page():
                 with m4:
                     st.markdown(f"<div style='font-size: 0.7rem; color: #94a3b8;'>SENTIMENT</div><div style='margin-top: 2px;'>{get_sentiment_badge(analysis['sentiment'])}</div>", unsafe_allow_html=True)
 
-                st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='height: 0.3rem;'></div>", unsafe_allow_html=True)
                 st.markdown(f"<div style='font-size: 0.82rem; color: #cbd5e1; background-color: rgba(255,255,255,0.02); border-left: 3px solid #475569; padding: 6px 10px; border-radius: 0 4px 4px 0;'><b>Reasoning:</b> {analysis['reasoning']}</div>", unsafe_allow_html=True)
             else:
                 st.caption("Ticket has not been processed by AI triage engine yet.")
@@ -248,7 +256,7 @@ def render_tickets_page():
             st.divider()
 
             # 4. Grounded AI Resolution (RAG)
-            r_hdr_col1, r_hdr_col2 = st.columns([3.8, 1.2])
+            r_hdr_col1, r_hdr_col2 = st.columns([4.4, 1.1])
             with r_hdr_col1:
                 st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase;'>Suggested Resolution (Grounded RAG)</div>", unsafe_allow_html=True)
                 st.markdown("<div style='font-size: 0.75rem; color: #64748b;'>Drafted strictly from internal company policy and knowledge base context</div>", unsafe_allow_html=True)
@@ -264,7 +272,7 @@ def render_tickets_page():
                                 st.error(res)
 
             if suggested_res:
-                st.markdown("<div style='height: 0.3rem;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='height: 0.25rem;'></div>", unsafe_allow_html=True)
                 # Compact Resolution Draft Display
                 st.markdown(
                     f"""<div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 6px; padding: 12px 14px; font-size: 0.88rem; line-height: 1.5; color: #f1f5f9; white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">{suggested_res['suggested_response']}</div>""",
@@ -273,7 +281,7 @@ def render_tickets_page():
 
                 # Attributed Sources Badges
                 sources = suggested_res.get("retrieved_sources", [])
-                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='height: 0.45rem;'></div>", unsafe_allow_html=True)
                 st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px;'>Attributed Knowledge Sources</div>", unsafe_allow_html=True)
                 if sources:
                     chips_html = " ".join([
@@ -284,9 +292,9 @@ def render_tickets_page():
                 else:
                     st.caption("No direct matching knowledge base document found.")
 
-                # Knowledge Chunks Inspector Expander (Kept exact)
+                # Knowledge Chunks Inspector Expander (Kept EXACTLY as original)
                 if retrieved_chunks:
-                    st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 0.3rem;'></div>", unsafe_allow_html=True)
                     with st.expander(f"Inspect Knowledge Context ({len(retrieved_chunks)} Chunks)"):
                         for i, c in enumerate(retrieved_chunks, 1):
                             st.markdown(f"**Chunk {i}: {c.get('doc_title')} — {c.get('section')}** (Similarity: `{c.get('similarity_score')}`)")
