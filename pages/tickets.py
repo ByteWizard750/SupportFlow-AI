@@ -20,32 +20,62 @@ from services.ticket_service import (
 )
 
 
+def get_initials(name: str) -> str:
+    parts = name.strip().split()
+    if not parts:
+        return "U"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return f"{parts[0][0]}{parts[1][0]}".upper()
+
+
 def get_priority_badge(priority: str) -> str:
-    p_lower = priority.lower()
-    if p_lower == "critical":
-        return ":red-background[CRITICAL]"
-    elif p_lower == "high":
-        return ":orange-background[HIGH]"
-    elif p_lower == "medium":
-        return ":blue-background[MEDIUM]"
-    return ":gray-background[LOW]"
+    p = priority.lower()
+    if p == "critical":
+        bg, color, border = "rgba(239, 68, 68, 0.15)", "#F87171", "rgba(239, 68, 68, 0.3)"
+    elif p == "high":
+        bg, color, border = "rgba(245, 158, 11, 0.15)", "#FBBF24", "rgba(245, 158, 11, 0.3)"
+    elif p == "medium":
+        bg, color, border = "rgba(59, 130, 246, 0.15)", "#60A5FA", "rgba(59, 130, 246, 0.3)"
+    else:
+        bg, color, border = "rgba(148, 163, 184, 0.15)", "#94A3B8", "rgba(148, 163, 184, 0.3)"
+    return f'<span style="background:{bg}; color:{color}; border:1px solid {border}; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; letter-spacing:0.04em;">{priority.upper()}</span>'
 
 
 def get_sentiment_badge(sentiment: str) -> str:
-    s_lower = sentiment.lower()
-    if s_lower == "positive":
-        return ":green-background[POSITIVE]"
-    elif s_lower == "neutral":
-        return ":gray-background[NEUTRAL]"
-    elif s_lower == "negative":
-        return ":orange-background[NEGATIVE]"
-    return ":red-background[FRUSTRATED]"
+    s = sentiment.lower()
+    if s == "positive":
+        bg, color, border = "rgba(16, 185, 129, 0.15)", "#34D399", "rgba(16, 185, 129, 0.3)"
+    elif s == "neutral":
+        bg, color, border = "rgba(148, 163, 184, 0.15)", "#94A3B8", "rgba(148, 163, 184, 0.3)"
+    elif s == "negative":
+        bg, color, border = "rgba(245, 158, 11, 0.15)", "#FBBF24", "rgba(245, 158, 11, 0.3)"
+    else:
+        bg, color, border = "rgba(239, 68, 68, 0.15)", "#F87171", "rgba(239, 68, 68, 0.3)"
+    return f'<span style="background:{bg}; color:{color}; border:1px solid {border}; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; letter-spacing:0.04em;">{sentiment.upper()}</span>'
+
+
+def get_status_badge(status: str) -> str:
+    if status == "AI Analyzed":
+        bg, color, border = "rgba(16, 185, 129, 0.15)", "#34D399", "rgba(16, 185, 129, 0.35)"
+    else:
+        bg, color, border = "rgba(59, 130, 246, 0.15)", "#60A5FA", "rgba(59, 130, 246, 0.35)"
+    return f'<span style="background:{bg}; color:{color}; border:1px solid {border}; font-size:11px; font-weight:700; padding:3px 9px; border-radius:4px; letter-spacing:0.06em;">{status.upper()}</span>'
 
 
 def render_tickets_page():
     # Page Header
-    st.title("Ticket Queue")
-    st.caption("Browse, triage, and inspect customer tickets with AI intelligence and grounded knowledge base resolutions")
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.5rem;">
+            <div>
+                <h1 style="margin: 0; font-size: 1.75rem; font-weight: 700;">Support Queue</h1>
+                <div style="color: #94A3B8; font-size: 0.88rem; margin-top: 4px;">Triage incoming tickets, review AI intelligence, and inspect grounded knowledge base resolutions</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.divider()
 
     tickets = get_all_tickets()
@@ -55,7 +85,7 @@ def render_tickets_page():
         return
 
     # Filter Bar
-    filter_col1, filter_col2, filter_col3 = st.columns([3, 1.5, 1])
+    filter_col1, filter_col2, filter_col3 = st.columns([3, 1.25, 0.75], gap="small")
     with filter_col1:
         search_query = st.text_input(
             "Search",
@@ -70,7 +100,14 @@ def render_tickets_page():
             label_visibility="collapsed"
         )
     with filter_col3:
-        st.caption(f"**{len(tickets)} total**")
+        st.markdown(
+            f"""
+            <div style="background: #151C2C; border: 1px solid #1E293B; border-radius: 7px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #94A3B8;">
+                {len(tickets)} Total
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # Filter Logic
     filtered = tickets
@@ -91,11 +128,18 @@ def render_tickets_page():
         st.warning("No tickets match the search criteria.")
         return
 
-    # Two-Column Cockpit Layout
-    col_queue, col_detail = st.columns([1.1, 1.4], gap="medium")
+    # Cockpit Grid: Left Queue Table / Right Inspector
+    col_queue, col_detail = st.columns([1, 1.35], gap="medium")
 
     with col_queue:
-        st.subheader("Queue")
+        st.markdown(
+            """
+            <div style="font-size: 0.82rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                Select Ticket
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         ticket_map = {
             f"#{t['id']} — {t['subject'][:32]}... ({t['customer_name']})": t["id"]
@@ -103,9 +147,10 @@ def render_tickets_page():
         }
 
         selected_key = st.selectbox(
-            "Select Ticket to Inspect",
+            "Select Ticket",
             options=list(ticket_map.keys()),
-            key="ticket_queue_selector"
+            key="ticket_queue_selector",
+            label_visibility="collapsed"
         )
         selected_id = ticket_map[selected_key]
 
@@ -122,6 +167,7 @@ def render_tickets_page():
         st.dataframe(
             df,
             hide_index=True,
+            use_container_width=True,
             column_config={
                 "ID": st.column_config.TextColumn("ID", width="small"),
                 "Customer": st.column_config.TextColumn("Customer", width="medium"),
@@ -139,24 +185,48 @@ def render_tickets_page():
         analysis = get_ticket_analysis(selected_id)
         suggested_res = get_ticket_suggested_response(selected_id)
         retrieved_chunks = retrieve_ticket_knowledge(selected_id, top_k=3)
+        initials = get_initials(ticket["customer_name"])
 
-        # Header Bar inside bordered card
+        # Inspector Container
         with st.container(border=True):
-            # Ticket Header Row
-            hdr_left, hdr_right = st.columns([3, 1.2])
-            with hdr_left:
-                st.subheader(f"Ticket #{ticket['id']}: {ticket['subject']}")
-                st.caption(f"Submitted by **{ticket['customer_name']}** on {ticket['created_at']}")
-            with hdr_right:
-                status_color = ":green-background" if ticket["status"] == "AI Analyzed" else ":blue-background"
-                st.markdown(f"**{status_color}[{ticket['status'].upper()}]**")
+            # Customer Header Card
+            st.markdown(
+                f"""
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 0 10px 0;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; border: 1px solid rgba(255,255,255,0.15);">
+                            {initials}
+                        </div>
+                        <div>
+                            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; line-height: 1.3;">
+                                #{ticket['id']} — {ticket['subject']}
+                            </div>
+                            <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 2px;">
+                                Submitted by <span style="color: #E2E8F0; font-weight: 600;">{ticket['customer_name']}</span> &bull; {ticket['created_at']}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        {get_status_badge(ticket['status'])}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            # Tabs for Clean Inspection
+            # Tabbed Workspace
             tab_overview, tab_resolution = st.tabs(["Overview & AI Triage", "Suggested Resolution (RAG)"])
 
             with tab_overview:
-                # Customer Description
-                st.caption("CUSTOMER INQUIRY")
+                # Customer Inquiry Body
+                st.markdown(
+                    """
+                    <div style="font-size: 0.78rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; margin-bottom: 4px;">
+                        Customer Inquiry
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
                 st.text_area(
                     "Description",
                     value=ticket["description"],
@@ -167,10 +237,20 @@ def render_tickets_page():
 
                 st.divider()
 
-                # AI Intelligence Sub-section
-                ai_top_left, ai_top_right = st.columns([3, 1.2])
+                # AI Intelligence Header & Actions
+                ai_top_left, ai_top_right = st.columns([3, 1.25])
                 with ai_top_left:
-                    st.markdown("##### AI Triage Intelligence")
+                    st.markdown(
+                        """
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #F8FAFC;">
+                            AI Triage Intelligence
+                        </div>
+                        <div style="font-size: 0.8rem; color: #94A3B8;">
+                            Structured ticket classification via Gemini
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 with ai_top_right:
                     if analysis:
                         if st.button("Re-analyze", key=f"reanalyze_tab_{selected_id}", use_container_width=True):
@@ -183,27 +263,44 @@ def render_tickets_page():
                                     st.error(res)
 
                 if analysis:
-                    m1, m2 = st.columns(2)
-                    with m1:
-                        st.caption("CATEGORY")
-                        st.markdown(f"**{analysis['category']}**")
-                    with m2:
-                        st.caption("RECOMMENDED DEPARTMENT")
-                        st.markdown(f"**{analysis['department']}**")
-
-                    m3, m4 = st.columns(2)
-                    with m3:
-                        st.caption("PRIORITY")
-                        st.markdown(f"**{get_priority_badge(analysis['priority'])}**")
-                    with m4:
-                        st.caption("SENTIMENT")
-                        st.markdown(f"**{get_sentiment_badge(analysis['sentiment'])}**")
-
-                    st.caption("REASONING")
-                    st.markdown(f"> {analysis['reasoning']}")
+                    # 4-Column Metadata Grid
+                    st.markdown(
+                        f"""
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 12px 0 10px 0;">
+                            <div style="background: #0F141F; border: 1px solid #1E293B; border-radius: 8px; padding: 10px 14px;">
+                                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">Category</div>
+                                <div style="font-size: 14px; font-weight: 600; color: #F1F5F9; margin-top: 4px;">{analysis['category']}</div>
+                            </div>
+                            <div style="background: #0F141F; border: 1px solid #1E293B; border-radius: 8px; padding: 10px 14px;">
+                                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">Assigned Department</div>
+                                <div style="font-size: 14px; font-weight: 600; color: #F1F5F9; margin-top: 4px;">{analysis['department']}</div>
+                            </div>
+                            <div style="background: #0F141F; border: 1px solid #1E293B; border-radius: 8px; padding: 10px 14px;">
+                                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Priority</div>
+                                <div>{get_priority_badge(analysis['priority'])}</div>
+                            </div>
+                            <div style="background: #0F141F; border: 1px solid #1E293B; border-radius: 8px; padding: 10px 14px;">
+                                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Sentiment</div>
+                                <div>{get_sentiment_badge(analysis['sentiment'])}</div>
+                            </div>
+                        </div>
+                        <div style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-left: 3px solid #6366F1; border-radius: 6px; padding: 10px 14px; margin-top: 10px;">
+                            <div style="font-size: 11px; font-weight: 600; color: #818CF8; text-transform: uppercase; letter-spacing: 0.05em;">AI Reasoning</div>
+                            <div style="font-size: 13px; color: #E2E8F0; margin-top: 4px; line-height: 1.5;">{analysis['reasoning']}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 else:
-                    st.caption("This ticket has not been classified by the AI engine yet.")
-                    if st.button("Analyze Ticket with AI", type="primary", key=f"analyze_tab_btn_{selected_id}"):
+                    st.markdown(
+                        """
+                        <div style="background: #0F141F; border: 1px dashed #334155; border-radius: 8px; padding: 16px; text-align: center; margin: 12px 0;">
+                            <div style="font-size: 13px; color: #94A3B8;">This ticket has not yet been processed by the AI analysis engine.</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    if st.button("Run AI Analysis", type="primary", key=f"analyze_tab_btn_{selected_id}", use_container_width=True):
                         with st.spinner("Analyzing ticket..."):
                             ok, res = analyze_and_store_ticket(selected_id)
                             if ok:
@@ -213,10 +310,19 @@ def render_tickets_page():
                                 st.error(res)
 
             with tab_resolution:
-                r_top_left, r_top_right = st.columns([3, 1.2])
+                r_top_left, r_top_right = st.columns([3, 1.25])
                 with r_top_left:
-                    st.markdown("##### Grounded AI Resolution")
-                    st.caption("Generated strictly from company knowledge base documentation")
+                    st.markdown(
+                        """
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #F8FAFC; margin-top: 4px;">
+                            Grounded AI Resolution
+                        </div>
+                        <div style="font-size: 0.8rem; color: #94A3B8;">
+                            Synthesized strictly from indexed internal knowledge base policies
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 with r_top_right:
                     if suggested_res:
                         if st.button("Regenerate", key=f"regen_tab_{selected_id}", use_container_width=True):
@@ -229,7 +335,14 @@ def render_tickets_page():
                                     st.error(res)
 
                 if suggested_res:
-                    st.caption("DRAFT RESPONSE (PENDING AGENT APPROVAL)")
+                    st.markdown(
+                        """
+                        <div style="font-size: 0.78rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; margin-bottom: 4px;">
+                            Draft Resolution (Agent Review Pending)
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                     st.text_area(
                         "Draft Resolution",
                         value=suggested_res["suggested_response"],
@@ -240,32 +353,49 @@ def render_tickets_page():
 
                     # Attributed Sources
                     sources = suggested_res.get("retrieved_sources", [])
-                    st.caption("ATTRIBUTED KNOWLEDGE SOURCES")
+                    st.markdown(
+                        """
+                        <div style="font-size: 0.78rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; margin-bottom: 6px;">
+                            Attributed Knowledge Sources
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                     if sources:
-                        for s in sources:
-                            st.markdown(f"- `:gray-background[{s}]`")
+                        source_badges = " ".join([
+                            f'<span style="background: #151C2C; border: 1px solid #334155; color: #CBD5E1; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 4px; display: inline-block; margin: 2px 4px 2px 0;">{s}</span>'
+                            for s in sources
+                        ])
+                        st.markdown(source_badges, unsafe_allow_html=True)
                     else:
                         st.caption("No direct policy document matched.")
 
                     # Matching Chunks Expander
                     if retrieved_chunks:
-                        with st.expander(f"Inspect Knowledge Context ({len(retrieved_chunks)} Chunks)"):
+                        with st.expander(f"Inspect Retrieved Knowledge Context ({len(retrieved_chunks)} Chunks)"):
                             for i, c in enumerate(retrieved_chunks, 1):
-                                st.markdown(f"**{c.get('doc_title')} — {c.get('section')}** (Score: `{c.get('similarity_score')}`)")
+                                st.markdown(f"**Chunk {i}: {c.get('doc_title')} — {c.get('section')}** (Cosine Similarity: `{c.get('similarity_score')}`)")
                                 st.info(c.get("text", ""))
 
                     st.caption(f"Drafted at: {suggested_res.get('created_at', '')}")
 
                 else:
-                    st.caption("Generate a resolution draft grounded in internal knowledge base documentation.")
-                    
+                    st.markdown(
+                        """
+                        <div style="background: #0F141F; border: 1px dashed #334155; border-radius: 8px; padding: 16px; text-align: center; margin: 12px 0;">
+                            <div style="font-size: 13px; color: #94A3B8;">Generate a verified customer resolution grounded in internal company documentation.</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
                     if retrieved_chunks:
                         with st.expander(f"Knowledge Context Preview ({len(retrieved_chunks)} matching chunks)"):
                             for i, c in enumerate(retrieved_chunks, 1):
                                 st.markdown(f"**{c.get('doc_title')} — {c.get('section')}** (Score: `{c.get('similarity_score')}`)")
                                 st.caption(c.get("text")[:180] + "...")
 
-                    if st.button("Generate Suggested Response", type="primary", key=f"gen_tab_btn_{selected_id}"):
+                    if st.button("Generate Suggested Response", type="primary", key=f"gen_tab_btn_{selected_id}", use_container_width=True):
                         with st.spinner("Drafting grounded response..."):
                             ok, res = generate_and_store_response(selected_id)
                             if ok:

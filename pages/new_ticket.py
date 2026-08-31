@@ -10,8 +10,17 @@ from services.ticket_service import create_ticket
 
 
 def render_new_ticket_page():
-    st.title("Create Support Ticket")
-    st.caption("Submit a new customer inquiry or incident into the support queue")
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.5rem;">
+            <div>
+                <h1 style="margin: 0; font-size: 1.75rem; font-weight: 700;">Submit Support Ticket</h1>
+                <div style="color: #94A3B8; font-size: 0.88rem; margin-top: 4px;">Ingest a new customer inquiry, bug report, or incident into the support queue</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.divider()
 
     # Form success notification
@@ -22,11 +31,18 @@ def render_new_ticket_page():
         st.success(st.session_state["ticket_created_success"])
         st.session_state["ticket_created_success"] = None
 
-    col_form, _ = st.columns([2, 1])
+    col_form, _ = st.columns([2.2, 1])
     with col_form:
         with st.container(border=True):
             with st.form("new_ticket_form", clear_on_submit=True):
-                st.subheader("Ticket Details")
+                st.markdown(
+                    """
+                    <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin-bottom: 12px;">
+                        Ticket Details
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 customer_name = st.text_input(
                     "Customer Name *",
@@ -47,8 +63,8 @@ def render_new_ticket_page():
                     help="Detailed description of the customer request."
                 )
 
-                st.divider()
-                submitted = st.form_submit_button("Submit Ticket", type="primary", use_container_width=True)
+                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("Submit Ticket to Queue", type="primary", use_container_width=True)
 
                 if submitted:
                     success, result = create_ticket(
@@ -59,7 +75,7 @@ def render_new_ticket_page():
 
                     if success:
                         st.session_state["ticket_created_success"] = (
-                            f"Ticket #{result} created successfully with status 'New'."
+                            f"Ticket #{result} submitted successfully with status 'New'."
                         )
                         st.rerun()
                     else:

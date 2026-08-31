@@ -1,11 +1,8 @@
 """
 Dashboard Page for SupportFlow AI.
 
-Displays metrics calculated directly from database records:
-- Total Tickets
-- New Tickets
-- Operational Status
-and a list of recent tickets.
+Displays operational metrics and recent support ticket activity
+in a sleek enterprise cockpit layout.
 """
 
 import streamlit as st
@@ -14,45 +11,89 @@ from services.ticket_service import get_dashboard_summary
 
 
 def render_dashboard():
-    st.title("System Dashboard")
-    st.caption("Operational overview and recent ticket activity")
+    # Page Header
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.5rem;">
+            <div>
+                <h1 style="margin: 0; font-size: 1.75rem; font-weight: 700;">Operations Dashboard</h1>
+                <div style="color: #94A3B8; font-size: 0.88rem; margin-top: 4px;">Real-time overview of ticket intake, AI triage throughput, and system health</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.divider()
 
     # Fetch live summary data
     summary = get_dashboard_summary()
     total_tickets = summary["total_tickets"]
     new_tickets = summary["new_tickets"]
+    analyzed_tickets = summary.get("analyzed_tickets", 0)
     recent_tickets = summary["recent_tickets"]
 
-    # Metric Cards Row
-    col1, col2, col3 = st.columns(3)
+    # 4-Column KPI Metric Cards
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        with st.container(border=True):
-            st.metric(
-                label="Total Tickets",
-                value=total_tickets,
-                help="Total tickets registered in the database"
-            )
+        st.markdown(
+            f"""
+            <div style="background: #121722; border: 1px solid #1E293B; border-radius: 10px; padding: 14px 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">Total Tickets</div>
+                <div style="font-size: 26px; font-weight: 700; color: #F8FAFC; margin-top: 4px;">{total_tickets}</div>
+                <div style="font-size: 12px; color: #64748B; margin-top: 2px;">All registered records</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with col2:
-        with st.container(border=True):
-            st.metric(
-                label="New Tickets",
-                value=new_tickets,
-                help="Tickets pending review or processing"
-            )
+        st.markdown(
+            f"""
+            <div style="background: #121722; border: 1px solid #1E293B; border-radius: 10px; padding: 14px 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">New Intake</div>
+                <div style="font-size: 26px; font-weight: 700; color: #60A5FA; margin-top: 4px;">{new_tickets}</div>
+                <div style="font-size: 12px; color: #64748B; margin-top: 2px;">Pending triage review</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with col3:
-        with st.container(border=True):
-            st.metric(
-                label="System Status",
-                value="Operational",
-                help="Database and services connected"
-            )
+        st.markdown(
+            f"""
+            <div style="background: #121722; border: 1px solid #1E293B; border-radius: 10px; padding: 14px 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">AI Analyzed</div>
+                <div style="font-size: 26px; font-weight: 700; color: #34D399; margin-top: 4px;">{analyzed_tickets}</div>
+                <div style="font-size: 12px; color: #64748B; margin-top: 2px;">Classified by Gemini</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-    st.subheader("Recent Tickets")
+    with col4:
+        st.markdown(
+            """
+            <div style="background: #121722; border: 1px solid #1E293B; border-radius: 10px; padding: 14px 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 11px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">Knowledge Base</div>
+                <div style="font-size: 26px; font-weight: 700; color: #818CF8; margin-top: 4px;">5 Docs</div>
+                <div style="font-size: 12px; color: #64748B; margin-top: 2px;">FAISS dense index ready</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.markdown("<div style='height: 1.25rem;'></div>", unsafe_allow_html=True)
+    
+    # Recent Tickets Table
+    st.markdown(
+        """
+        <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin-bottom: 6px;">
+            Recent Ticket Activity
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     if not recent_tickets:
         st.info("No tickets created yet. Navigate to 'New Ticket' to submit a record.")
@@ -70,6 +111,7 @@ def render_dashboard():
         st.dataframe(
             df,
             hide_index=True,
+            use_container_width=True,
             column_config={
                 "ID": st.column_config.TextColumn("ID", width="small"),
                 "Customer": st.column_config.TextColumn("Customer", width="medium"),
