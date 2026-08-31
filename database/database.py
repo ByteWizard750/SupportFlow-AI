@@ -1,7 +1,7 @@
 """
 SQLite Database Layer for SupportFlow AI.
 
-Handles database initialization, connection lifecycle, and CRUD operations
+Handles database initialization, connection lifecycle, and CRUD/aggregation operations
 for support tickets, AI ticket analyses, and RAG suggested responses.
 """
 
@@ -305,3 +305,186 @@ def get_ticket_metrics(db_path: Optional[str] = None) -> Dict[str, int]:
             "new": new_count,
             "analyzed": analyzed_count
         }
+
+
+# ==================== PHASE 4: SQL ANALYTICS AGGREGATIONS ====================
+
+def get_analytics_kpis(db_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Computes comprehensive KPI metrics for the Support Intelligence Dashboard:
+    - total_tickets: Overall volume of tickets
+    - new_tickets: Pending triage tickets (status = 'New')
+    - analyzed_tickets: Successfully classified tickets (status = 'AI Analyzed')
+    - urgent_tickets: High or Critical priority tickets
+    - rag_responses: Tickets with grounded RAG suggestions generated
+    - triage_coverage_pct: Percentage of tickets that have undergone AI analysis
+    - rag_coverage_pct: Percentage of tickets that have generated suggested responses
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) AS total FROM tickets;")
+        total = cursor.fetchone()["total"] or 0
+
+        cursor.execute("SELECT COUNT(*) AS new_cnt FROM tickets WHERE status = 'New';")
+        new_cnt = cursor.fetchone()["new_cnt"] or 0
+
+        cursor.execute("SELECT COUNT(*) AS analyzed_cnt FROM tickets WHERE status = 'AI Analyzed';")
+        analyzed_cnt = cursor.fetchone()["analyzed_cnt"] or 0
+
+        cursor.execute("SELECT COUNT(*) AS urgent_cnt FROM ticket_analyses WHERE priority IN ('High', 'Critical');")
+        urgent_cnt = cursor.fetchone()["urgent_cnt"] or 0
+
+        cursor.execute("SELECT COUNT(*) AS rag_cnt FROM ticket_rag_responses;")
+        rag_cnt = cursor.fetchone()["rag_cnt"] or 0
+
+        triage_coverage = round((analyzed_cnt / total * 100.0), 1) if total > 0 else 0.0
+        rag_coverage = round((rag_cnt / total * 100.0), 1) if total > 0 else 0.0
+
+        return {
+            "total_tickets": total,
+            "new_tickets": new_cnt,
+            "analyzed_tickets": analyzed_cnt,
+            "urgent_tickets": urgent_cnt,
+            "rag_responses": rag_cnt,
+            "triage_coverage_pct": triage_coverage,
+            "rag_coverage_pct": rag_coverage
+        }
+
+
+def get_category_distribution(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Aggregates ticket count grouped by Category.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT category, COUNT(*) AS count
+            FROM ticket_analyses
+            GROUP BY category
+            ORDER BY count DESC, category ASC;
+            """
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def get_department_distribution(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Aggregates ticket count grouped by Recommended Department.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT department, COUNT(*) AS count
+            FROM ticket_analyses
+            GROUP BY department
+            ORDER BY count DESC, department ASC;
+            """
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def get_priority_distribution(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Aggregates ticket count grouped by Priority level.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT priority, COUNT(*) AS count
+            FROM ticket_analyses
+            GROUP BY priority
+            ORDER BY count DESC, priority ASC;
+            """
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def get_sentiment_distribution(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Aggregates ticket count grouped by Customer Sentiment.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT sentiment, COUNT(*) AS count
+            FROM ticket_analyses
+            GROUP BY sentiment
+            ORDER BY count DESC, sentiment ASC;
+            """
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def get_daily_ticket_volume(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Aggregates ticket count grouped by creation date (YYYY-MM-DD).
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT DATE(created_at) AS date, COUNT(*) AS count
+            FROM tickets
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC;
+            """
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def get_urgent_tickets(limit: int = 5, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Retrieves the most recent tickets flagged as High or Critical priority.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                t.id, 
+                t.customer_name, 
+                t.subject, 
+                t.status, 
+                ta.category, 
+                ta.priority, 
+                ta.department, 
+                t.created_at
+            FROM tickets t
+            JOIN ticket_analyses ta ON t.id = ta.ticket_id
+            WHERE ta.priority IN ('High', 'Critical')
+            ORDER BY t.created_at DESC, t.id DESC
+            LIMIT ?;
+            """,
+            (limit,)
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def get_recent_activity(limit: int = 5, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Retrieves the most recent tickets with their category (if analyzed).
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                t.id, 
+                t.customer_name, 
+                t.subject, 
+                t.status, 
+                COALESCE(ta.category, 'Pending Triage') AS category, 
+                t.created_at
+            FROM tickets t
+            LEFT JOIN ticket_analyses ta ON t.id = ta.ticket_id
+            ORDER BY t.created_at DESC, t.id DESC
+            LIMIT ?;
+            """,
+            (limit,)
+        )
+        return [dict(r) for r in cursor.fetchall()]

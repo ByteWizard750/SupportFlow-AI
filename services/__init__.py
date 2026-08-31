@@ -25,6 +25,11 @@ from .response_service import (
     generate_suggested_response,
     extract_deterministic_sources,
 )
+from .analytics_service import (
+    get_dashboard_analytics,
+    generate_executive_brief,
+    ExecutiveBriefSchema,
+)
 
 __all__ = [
     "validate_ticket_input",
@@ -45,4 +50,7 @@ __all__ = [
     "retrieve_relevant_chunks",
     "generate_suggested_response",
     "extract_deterministic_sources",
+    "get_dashboard_analytics",
+    "generate_executive_brief",
+    "ExecutiveBriefSchema",
 ]

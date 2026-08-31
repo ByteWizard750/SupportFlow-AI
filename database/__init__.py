@@ -13,6 +13,14 @@ from .database import (
     save_suggested_response,
     get_suggested_response,
     get_ticket_metrics,
+    get_analytics_kpis,
+    get_category_distribution,
+    get_department_distribution,
+    get_priority_distribution,
+    get_sentiment_distribution,
+    get_daily_ticket_volume,
+    get_urgent_tickets,
+    get_recent_activity,
 )
 
 __all__ = [
@@ -27,4 +35,12 @@ __all__ = [
     "save_suggested_response",
     "get_suggested_response",
     "get_ticket_metrics",
+    "get_analytics_kpis",
+    "get_category_distribution",
+    "get_department_distribution",
+    "get_priority_distribution",
+    "get_sentiment_distribution",
+    "get_daily_ticket_volume",
+    "get_urgent_tickets",
+    "get_recent_activity",
 ]
