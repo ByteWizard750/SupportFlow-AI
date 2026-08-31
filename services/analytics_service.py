@@ -23,6 +23,7 @@ from database.database import (
     get_daily_ticket_volume,
     get_urgent_tickets,
     get_recent_activity,
+    get_recent_resolutions,
 )
 
 
@@ -54,6 +55,7 @@ def get_dashboard_analytics(db_path: Optional[str] = None) -> Dict[str, Any]:
     daily_volume = get_daily_ticket_volume(db_path=db_path)
     urgent_tickets = get_urgent_tickets(limit=5, db_path=db_path)
     recent_activity = get_recent_activity(limit=5, db_path=db_path)
+    recent_resolutions = get_recent_resolutions(limit=5, db_path=db_path)
 
     # Convert to clean DataFrames
     df_categories = pd.DataFrame(categories) if categories else pd.DataFrame(columns=["category", "count"])
@@ -88,8 +90,9 @@ def get_dashboard_analytics(db_path: Optional[str] = None) -> Dict[str, Any]:
         "df_daily": df_daily,
         "urgent_tickets": urgent_tickets,
         "recent_activity": recent_activity,
+        "recent_resolutions": recent_resolutions,
         "has_data": kpis["total_tickets"] > 0,
-        "has_analysis": kpis["analyzed_tickets"] > 0,
+        "has_analysis": (kpis["total_tickets"] - kpis["new_tickets"]) > 0,
     }
 
 
@@ -126,8 +129,12 @@ Analyze the current support metrics and generate an actionable operational brief
 
 Support Metrics Summary:
 - Total Tickets: {kpis.get('total_tickets', 0)}
+- Open Tickets: {kpis.get('open_tickets', 0)}
 - Pending Triage: {kpis.get('new_tickets', 0)}
 - AI Analyzed: {kpis.get('analyzed_tickets', 0)}
+- In Progress: {kpis.get('in_progress_tickets', 0)}
+- Resolved: {kpis.get('resolved_tickets', 0)}
+- Resolution Rate: {kpis.get('resolution_rate_pct', 0.0)}%
 - Urgent / Critical Issues: {kpis.get('urgent_tickets', 0)}
 - Grounded Response Coverage: {kpis.get('rag_coverage_pct', 0.0)}%
 - Top Categories: {cat_summary}

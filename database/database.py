@@ -2,7 +2,7 @@
 SQLite Database Layer for SupportFlow AI.
 
 Handles database initialization, connection lifecycle, and CRUD/aggregation operations
-for support tickets, AI ticket analyses, and RAG suggested responses.
+for support tickets, AI ticket analyses, RAG suggested responses, and human agent resolutions.
 """
 
 import os
@@ -39,7 +39,7 @@ def get_connection(db_path: Optional[str] = None):
 def init_db(db_path: Optional[str] = None) -> None:
     """
     Initializes the SQLite database schema if it doesn't already exist.
-    Creates 'tickets', 'ticket_analyses', and 'ticket_rag_responses' tables.
+    Creates 'tickets', 'ticket_analyses', 'ticket_rag_responses', and 'ticket_resolutions' tables.
     """
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
@@ -84,6 +84,21 @@ def init_db(db_path: Optional[str] = None) -> None:
                 suggested_response TEXT NOT NULL,
                 retrieved_sources TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+            );
+            """
+        )
+
+        # Ticket Resolutions Table (Phase 5 — Human-in-the-Loop)
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ticket_resolutions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id INTEGER NOT NULL UNIQUE,
+                agent_response TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Draft',
+                resolved_at TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
             );
             """
@@ -307,18 +322,139 @@ def get_ticket_metrics(db_path: Optional[str] = None) -> Dict[str, int]:
         }
 
 
-# ==================== PHASE 4: SQL ANALYTICS AGGREGATIONS ====================
+# ==================== PHASE 5: HUMAN-IN-THE-LOOP RESOLUTIONS ====================
+
+def save_agent_response(
+    ticket_id: int,
+    agent_response: str,
+    status: str = "Draft",
+    db_path: Optional[str] = None
+) -> int:
+    """
+    Saves or updates the human support agent's edited response in 'ticket_resolutions'.
+    Does not overwrite or alter the AI suggested response in 'ticket_rag_responses'.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO ticket_resolutions (ticket_id, agent_response, status, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(ticket_id) DO UPDATE SET
+                agent_response = excluded.agent_response,
+                status = excluded.status,
+                updated_at = CURRENT_TIMESTAMP;
+            """,
+            (ticket_id, agent_response.strip(), status)
+        )
+        return cursor.lastrowid
+
+
+def get_agent_response(ticket_id: int, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves the agent's edited response and resolution status for a ticket.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, ticket_id, agent_response, status, resolved_at, updated_at
+            FROM ticket_resolutions
+            WHERE ticket_id = ?;
+            """,
+            (ticket_id,)
+        )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def get_ticket_resolution(ticket_id: int, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Alias for get_agent_response to retrieve complete resolution metadata.
+    """
+    return get_agent_response(ticket_id, db_path=db_path)
+
+
+def mark_ticket_resolved(
+    ticket_id: int,
+    agent_response: str,
+    db_path: Optional[str] = None
+) -> bool:
+    """
+    Marks a support ticket as 'Resolved' in SQLite:
+    1. Saves the final human agent response in 'ticket_resolutions' with status 'Resolved' and resolved_at timestamp.
+    2. Updates the ticket's primary status in 'tickets' table to 'Resolved'.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO ticket_resolutions (ticket_id, agent_response, status, resolved_at, updated_at)
+            VALUES (?, ?, 'Resolved', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(ticket_id) DO UPDATE SET
+                agent_response = excluded.agent_response,
+                status = 'Resolved',
+                resolved_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP;
+            """,
+            (ticket_id, agent_response.strip())
+        )
+
+        cursor.execute(
+            """
+            UPDATE tickets
+            SET status = 'Resolved'
+            WHERE id = ?;
+            """,
+            (ticket_id,)
+        )
+        return cursor.rowcount > 0
+
+
+def get_recent_resolutions(limit: int = 5, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Retrieves the most recent resolved tickets with customer details, category, and resolved timestamp.
+    """
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                t.id, 
+                t.customer_name, 
+                t.subject, 
+                t.status, 
+                COALESCE(ta.category, 'General') AS category, 
+                tr.agent_response, 
+                tr.resolved_at
+            FROM tickets t
+            JOIN ticket_resolutions tr ON t.id = tr.ticket_id
+            LEFT JOIN ticket_analyses ta ON t.id = ta.ticket_id
+            WHERE t.status = 'Resolved'
+            ORDER BY tr.resolved_at DESC, t.id DESC
+            LIMIT ?;
+            """,
+            (limit,)
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+
+# ==================== PHASE 4 & 5: SQL ANALYTICS AGGREGATIONS ====================
 
 def get_analytics_kpis(db_path: Optional[str] = None) -> Dict[str, Any]:
     """
-    Computes comprehensive KPI metrics for the Support Intelligence Dashboard:
+    Computes comprehensive operational lifecycle KPI metrics:
     - total_tickets: Overall volume of tickets
+    - open_tickets: Tickets not marked Resolved (New, AI Analyzed, In Progress)
     - new_tickets: Pending triage tickets (status = 'New')
     - analyzed_tickets: Successfully classified tickets (status = 'AI Analyzed')
+    - in_progress_tickets: Tickets actively being worked on by human agents (status = 'In Progress')
+    - resolved_tickets: Tickets successfully resolved (status = 'Resolved')
     - urgent_tickets: High or Critical priority tickets
     - rag_responses: Tickets with grounded RAG suggestions generated
-    - triage_coverage_pct: Percentage of tickets that have undergone AI analysis
+    - triage_coverage_pct: Percentage of tickets that have been processed beyond 'New'
     - rag_coverage_pct: Percentage of tickets that have generated suggested responses
+    - resolution_rate_pct: Percentage of tickets resolved
     """
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
@@ -332,23 +468,39 @@ def get_analytics_kpis(db_path: Optional[str] = None) -> Dict[str, Any]:
         cursor.execute("SELECT COUNT(*) AS analyzed_cnt FROM tickets WHERE status = 'AI Analyzed';")
         analyzed_cnt = cursor.fetchone()["analyzed_cnt"] or 0
 
+        cursor.execute("SELECT COUNT(*) AS in_progress_cnt FROM tickets WHERE status = 'In Progress';")
+        in_progress_cnt = cursor.fetchone()["in_progress_cnt"] or 0
+
+        cursor.execute("SELECT COUNT(*) AS resolved_cnt FROM tickets WHERE status = 'Resolved';")
+        resolved_cnt = cursor.fetchone()["resolved_cnt"] or 0
+
+        cursor.execute("SELECT COUNT(*) AS open_cnt FROM tickets WHERE status != 'Resolved';")
+        open_cnt = cursor.fetchone()["open_cnt"] or 0
+
         cursor.execute("SELECT COUNT(*) AS urgent_cnt FROM ticket_analyses WHERE priority IN ('High', 'Critical');")
         urgent_cnt = cursor.fetchone()["urgent_cnt"] or 0
 
         cursor.execute("SELECT COUNT(*) AS rag_cnt FROM ticket_rag_responses;")
         rag_cnt = cursor.fetchone()["rag_cnt"] or 0
 
-        triage_coverage = round((analyzed_cnt / total * 100.0), 1) if total > 0 else 0.0
+        # Triage coverage includes all tickets moved beyond raw 'New' status
+        triaged_cnt = total - new_cnt
+        triage_coverage = round((triaged_cnt / total * 100.0), 1) if total > 0 else 0.0
         rag_coverage = round((rag_cnt / total * 100.0), 1) if total > 0 else 0.0
+        resolution_rate = round((resolved_cnt / total * 100.0), 1) if total > 0 else 0.0
 
         return {
             "total_tickets": total,
+            "open_tickets": open_cnt,
             "new_tickets": new_cnt,
             "analyzed_tickets": analyzed_cnt,
+            "in_progress_tickets": in_progress_cnt,
+            "resolved_tickets": resolved_cnt,
             "urgent_tickets": urgent_cnt,
             "rag_responses": rag_cnt,
             "triage_coverage_pct": triage_coverage,
-            "rag_coverage_pct": rag_coverage
+            "rag_coverage_pct": rag_coverage,
+            "resolution_rate_pct": resolution_rate
         }
 
 

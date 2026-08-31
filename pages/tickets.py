@@ -2,8 +2,8 @@
 Tickets Queue and Detail Inspector for SupportFlow AI.
 
 Full-width stacked cockpit layout:
-- Top Section: Clean Header with Stats, Search, Status Filter, Ticket Selector & Overview Queue Table
-- Bottom Section: Ticket Details, AI Triage Intelligence & Grounded Resolution Inspector
+- Top Section: Header with Stats, Search, Status Filter, Ticket Selector & Overview Queue Table
+- Bottom Section: Ticket Details, AI Triage Intelligence, Grounded Resolution & Human Agent Review Workflow
 """
 
 import streamlit as st
@@ -17,11 +17,21 @@ from services.ticket_service import (
     generate_and_store_response,
     get_ticket_suggested_response,
 )
+from services.agent_service import (
+    save_agent_draft,
+    mark_in_progress,
+    resolve_ticket,
+    get_agent_workspace_data,
+)
 
 
 def get_status_badge(status: str) -> str:
     if status == "AI Analyzed":
         return '<span style="background-color: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">AI Analyzed</span>'
+    elif status == "In Progress":
+        return '<span style="background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">In Progress</span>'
+    elif status == "Resolved":
+        return '<span style="background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Resolved</span>'
     return '<span style="background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">New</span>'
 
 
@@ -70,20 +80,24 @@ def get_sentiment_badge(sentiment: str) -> str:
 def render_tickets_page():
     tickets = get_all_tickets()
     analyzed_count = sum(1 for t in tickets if t["status"] == "AI Analyzed") if tickets else 0
+    resolved_count = sum(1 for t in tickets if t["status"] == "Resolved") if tickets else 0
 
     # Non-colliding Top Header Row
     st.title("Ticket Queue")
-    st.caption("Inspect, triage, and resolve customer support tickets with AI intelligence and grounded knowledge base suggestions")
+    st.caption("Inspect, triage, review AI suggested responses, and resolve customer support tickets")
 
-    # Clean Inline Counter Badges (Safe from Streamlit top menu collision)
+    # Clean Inline Counter Badges
     st.markdown(
         f"""
         <div style="display: flex; gap: 8px; margin-top: 4px; margin-bottom: 8px;">
             <span style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #94a3b8;">
-                Total Tickets: <b style="color: #f1f5f9;">{len(tickets)}</b>
+                Total: <b style="color: #f1f5f9;">{len(tickets)}</b>
             </span>
             <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #4ade80;">
                 AI Analyzed: <b>{analyzed_count}</b>
+            </span>
+            <span style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #34d399;">
+                Resolved: <b>{resolved_count}</b>
             </span>
         </div>
         """,
@@ -97,7 +111,6 @@ def render_tickets_page():
         return
 
     # ==================== TOP SECTION: TICKET QUEUE OVERVIEW ====================
-    # Search, Filter & Ticket Selector Toolbar
     t_search_col, t_filter_col, t_select_col = st.columns([1.5, 1, 2], gap="medium")
 
     with t_search_col:
@@ -108,10 +121,10 @@ def render_tickets_page():
         )
 
     with t_filter_col:
-        status_options = ["All Statuses"] + sorted(list({t["status"] for t in tickets}))
+        all_possible_statuses = ["All Statuses", "New", "AI Analyzed", "In Progress", "Resolved"]
         selected_status = st.selectbox(
             "Status Filter",
-            options=status_options,
+            options=all_possible_statuses,
             label_visibility="collapsed"
         )
 
@@ -131,7 +144,7 @@ def render_tickets_page():
         filtered = [t for t in filtered if t["status"] == selected_status]
 
     if not filtered:
-        st.warning("No tickets match the search criteria.")
+        st.warning(f"No tickets match the selected filter ('{selected_status}').")
         return
 
     # Synchronized Ticket Selector Dropdown
@@ -169,19 +182,19 @@ def render_tickets_page():
         df,
         hide_index=True,
         use_container_width=True,
-        height=210,
+        height=200,
         column_config={
             "ID": st.column_config.TextColumn("ID", width=60),
             "Customer": st.column_config.TextColumn("Customer", width=150),
             "Subject": st.column_config.TextColumn("Subject", width="large"),
-            "Status": st.column_config.TextColumn("Status", width=100),
+            "Status": st.column_config.TextColumn("Status", width=110),
             "Submitted": st.column_config.TextColumn("Submitted", width=160),
         }
     )
 
-    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 0.4rem;'></div>", unsafe_allow_html=True)
 
-    # ==================== BOTTOM SECTION: TICKET DETAIL & AI INSPECTOR ====================
+    # ==================== BOTTOM SECTION: TICKET DETAIL & WORKSPACE ====================
     ticket = get_ticket_by_id(selected_id)
     if not ticket:
         st.error("Selected ticket could not be loaded.")
@@ -190,6 +203,7 @@ def render_tickets_page():
     analysis = get_ticket_analysis(selected_id)
     suggested_res = get_ticket_suggested_response(selected_id)
     retrieved_chunks = retrieve_ticket_knowledge(selected_id, top_k=3)
+    workspace = get_agent_workspace_data(selected_id)
 
     # Main Detail Workspace Container
     with st.container(border=True):
@@ -210,7 +224,7 @@ def render_tickets_page():
             unsafe_allow_html=True
         )
 
-        st.markdown("<div style='height: 0.6rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
 
         # 3. AI Intelligence Triage
         ai_hdr_col1, ai_hdr_col2 = st.columns([4.2, 1])
@@ -274,32 +288,30 @@ def render_tickets_page():
             st.markdown("<div style='height: 0.25rem;'></div>", unsafe_allow_html=True)
             # Full-Width Resolution Draft Display
             st.markdown(
-                f"""<div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 6px; padding: 14px 16px; font-size: 0.9rem; line-height: 1.6; color: #f1f5f9; white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">{suggested_res['suggested_response']}</div>""",
+                f"""<div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 6px; padding: 12px 14px; font-size: 0.88rem; line-height: 1.6; color: #f1f5f9; white-space: pre-wrap;">{suggested_res['suggested_response']}</div>""",
                 unsafe_allow_html=True
             )
 
             # Attributed Sources Badges
             sources = suggested_res.get("retrieved_sources", [])
-            st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-            st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px;'>Attributed Knowledge Sources</div>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 0.4rem;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 3px;'>Attributed Knowledge Sources</div>", unsafe_allow_html=True)
             if sources:
                 chips_html = " ".join([
-                    f'<span style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 4px; padding: 3px 8px; font-size: 0.8rem; font-weight: 500; color: #93c5fd; display: inline-block; margin: 2px 4px 4px 0;">{s}</span>'
+                    f'<span style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 4px; padding: 2px 7px; font-size: 0.78rem; font-weight: 500; color: #93c5fd; display: inline-block; margin: 2px 4px 4px 0;">{s}</span>'
                     for s in sources
                 ])
                 st.markdown(chips_html, unsafe_allow_html=True)
             else:
                 st.caption("No direct matching knowledge base document found.")
 
-            # Knowledge Chunks Inspector Expander (Kept EXACTLY as original)
+            # Knowledge Chunks Inspector Expander
             if retrieved_chunks:
-                st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='height: 0.25rem;'></div>", unsafe_allow_html=True)
                 with st.expander(f"Inspect Knowledge Context ({len(retrieved_chunks)} Chunks)"):
                     for i, c in enumerate(retrieved_chunks, 1):
                         st.markdown(f"**Chunk {i}: {c.get('doc_title')} — {c.get('section')}** (Similarity: `{c.get('similarity_score')}`)")
                         st.info(c.get("text", ""))
-
-            st.markdown(f"<div style='font-size: 0.72rem; color: #64748b; margin-top: 6px;'>Drafted at: {suggested_res.get('created_at', '')}</div>", unsafe_allow_html=True)
 
         else:
             st.markdown("<div style='height: 0.2rem;'></div>", unsafe_allow_html=True)
@@ -319,6 +331,69 @@ def render_tickets_page():
                         st.rerun()
                     else:
                         st.error(res)
+
+        st.divider()
+
+        # ==================== 5. HUMAN-IN-THE-LOOP: AGENT REVIEW & RESOLUTION ====================
+        st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase;'>Agent Review & Resolution</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 0.78rem; color: #64748b; margin-bottom: 8px;'>Review, edit, and approve the final response before resolving the ticket</div>", unsafe_allow_html=True)
+
+        is_resolved = workspace["is_resolved"]
+        resolution_rec = workspace["resolution"]
+
+        # Editable Response Text Area
+        agent_edited_text = st.text_area(
+            "Agent Final Response",
+            value=workspace["initial_text"],
+            key=f"agent_text_editor_{selected_id}",
+            height=140,
+            placeholder="Review, modify, or approve the customer response before resolving...",
+            help="Your edited response is preserved separately from the AI suggested draft."
+        )
+
+        st.markdown("<div style='height: 0.3rem;'></div>", unsafe_allow_html=True)
+
+        # Action Buttons Row
+        act_col1, act_col2, act_col3 = st.columns([1, 1.2, 1.6], gap="small")
+
+        with act_col1:
+            if st.button("Save Draft", key=f"save_draft_{selected_id}", use_container_width=True, disabled=is_resolved):
+                ok, msg = save_agent_draft(selected_id, agent_edited_text)
+                if ok:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+        with act_col2:
+            in_prog_disabled = is_resolved or ticket["status"] == "In Progress"
+            if st.button("Mark In Progress", key=f"mark_prog_{selected_id}", use_container_width=True, disabled=in_prog_disabled):
+                ok, msg = mark_in_progress(selected_id, agent_edited_text)
+                if ok:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+        with act_col3:
+            if st.button("✓ Mark Ticket as Resolved", key=f"mark_resolv_{selected_id}", type="primary", use_container_width=True, disabled=is_resolved):
+                ok, msg = resolve_ticket(selected_id, agent_edited_text)
+                if ok:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+        # Resolution Status Banner if Resolved
+        if is_resolved and resolution_rec:
+            st.markdown(
+                f"""
+                <div style="background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #6ee7b7;">
+                    <b>Ticket Resolved</b> • Resolution approved at {resolution_rec.get('resolved_at', 'Recorded')}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 
 if __name__ == "__main__" or True:

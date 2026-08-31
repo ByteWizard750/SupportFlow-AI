@@ -30,6 +30,14 @@ from .analytics_service import (
     generate_executive_brief,
     ExecutiveBriefSchema,
 )
+from .agent_service import (
+    save_agent_draft,
+    mark_in_progress,
+    resolve_ticket,
+    validate_status_transition,
+    get_agent_workspace_data,
+    VALID_STATUSES,
+)
 
 __all__ = [
     "validate_ticket_input",
@@ -53,4 +61,10 @@ __all__ = [
     "get_dashboard_analytics",
     "generate_executive_brief",
     "ExecutiveBriefSchema",
+    "save_agent_draft",
+    "mark_in_progress",
+    "resolve_ticket",
+    "validate_status_transition",
+    "get_agent_workspace_data",
+    "VALID_STATUSES",
 ]

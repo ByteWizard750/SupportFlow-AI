@@ -10,7 +10,7 @@
 - [x] **Phase 2: AI Ticket Analysis** (Gemini structured metadata classification: Category, Priority, Sentiment, Department, Reasoning)
 - [x] **Phase 3: RAG Knowledge Base & Suggested Response** (Local embeddings, FAISS vector search, grounded response generation, deterministic source attribution)
 - [x] **Phase 4: AI Analytics & Support Intelligence Dashboard** (SQL-based real-time KPIs, 2x2 AI distribution charts, workload allocation, urgent escalation queue, on-demand Gemini executive briefing)
-- [ ] **Phase 5: Human-in-the-Loop Workflow** (Agent review, editing, approval/rejection, resolution states)
+- [x] **Phase 5: Human-in-the-Loop Workflow** (Agent review panel, draft editing, status transitions: New → AI Analyzed → In Progress → Resolved, resolution tracking, lifecycle KPIs)
 
 ---
 
@@ -40,18 +40,19 @@ SupportFlow-AI/
 │   └── chunks_metadata.json
 ├── database/
 │   ├── __init__.py
-│   └── database.py               # SQLite schema & SQL analytics aggregations
+│   └── database.py               # SQLite schema (tickets, ticket_analyses, ticket_rag_responses, ticket_resolutions)
 ├── services/
 │   ├── __init__.py
 │   ├── ticket_service.py         # Business operations & workflow orchestration
 │   ├── ai_service.py             # Gemini ticket classification & prompt engineering
 │   ├── rag_service.py            # Local SentenceTransformers + FAISS semantic search
 │   ├── response_service.py       # Grounded response drafting & source attribution
-│   └── analytics_service.py      # Dashboard analytics formatting & on-demand Gemini executive brief
+│   ├── analytics_service.py      # Dashboard analytics formatting & on-demand Gemini executive brief
+│   └── agent_service.py          # Human-in-the-loop draft editing & ticket resolution workflow
 ├── pages/
-│   ├── dashboard.py              # Support Intelligence Dashboard (KPIs, Charts, Urgent Queue, AI Brief)
+│   ├── dashboard.py              # Support Intelligence Dashboard (Lifecycle KPIs, Charts, Tables, AI Brief)
 │   ├── new_ticket.py             # Balanced centered ticket creation form
-│   └── tickets.py                # Full-width stacked ticket queue & AI resolution inspector
+│   └── tickets.py                # Ticket Queue, AI Inspector, and Agent Review & Resolution panel
 ├── app.py                        # Main Streamlit application entry point
 ├── config.py                     # Secure environment and Gemini API key manager
 ├── requirements.txt              # Project dependencies
@@ -59,28 +60,31 @@ SupportFlow-AI/
 ├── test_phase2.py                # AI analysis unit tests (4 tests)
 ├── test_phase3.py                # RAG & retrieval unit tests (6 tests)
 ├── test_phase4.py                # Analytics & aggregation unit tests (5 tests)
+├── test_phase5.py                # Human-in-the-loop workflow unit tests (7 tests)
 └── README.md
 ```
 
 ---
 
-## Phase 4 Architecture: Support Intelligence Dashboard
+## Complete Support Lifecycle: Phase 1 to Phase 5
 
-1. **Quota-Safe SQL-Powered Analytics**:
-   - All top KPI metric cards, distribution charts, and workload tables run on local SQLite `GROUP BY` and `JOIN` aggregations with **< 2ms execution time** and **zero API quota consumed**.
-2. **2 x 2 AI Intelligence Chart Grid**:
-   - **Category Distribution**: Horizontal bar chart for long category labels.
-   - **Department Workload**: Column chart comparing support team routing.
-   - **Priority Spectrum**: Color-coded severity distribution (Critical, High, Medium, Low).
-   - **Customer Sentiment Pulse**: Emotional sentiment breakdown (Positive, Neutral, Negative, Frustrated).
-3. **Urgent Escalation Queue**:
-   - Dedicated table highlighting High and Critical priority tickets for immediate support action.
-4. **On-Demand Executive AI Brief**:
-   - A dedicated card powered by Google Gemini (`gemini-3-flash-preview`) that synthesizes current support trends into exactly 3 structured insights:
-     1. Primary Customer Pain Point
-     2. Highest Workload / Risk Area
-     3. Recommended Operational Action
-   - **Strictly on-demand**: Only runs when the user clicks "Generate Executive AI Brief", with results cached in `st.session_state` to conserve API quota.
+```text
+Customer Ingestion
+       ↓
+[ Create Ticket ] (SQLite: status='New')
+       ↓
+[ AI Triage Intelligence ] (Gemini classification: Category, Priority, Sentiment, Department -> status='AI Analyzed')
+       ↓
+[ Grounded RAG Retrieval ] (Local FAISS semantic search -> internal company policy context)
+       ↓
+[ AI Suggested Response ] (Grounded draft + deterministic source citations)
+       ↓
+[ Agent Review & Edit ] (Human support agent modifies draft response -> status='In Progress')
+       ↓
+[ Ticket Resolution ] (Agent approves final customer response -> status='Resolved', timestamped in SQLite)
+       ↓
+[ Support Intelligence ] (SQL real-time lifecycle KPIs, 2x2 distribution charts, Recent Resolutions, Executive AI Brief)
+```
 
 ---
 
@@ -121,11 +125,12 @@ Open your browser at `http://localhost:8501`.
 ## Running Automated Tests
 
 ```bash
-# Run complete test suite (20 automated unit tests, zero API quota consumed)
+# Run complete test suite across all 5 phases (27 unit tests, zero API quota consumed)
 .venv/bin/python test_phase1.py
 .venv/bin/python test_phase2.py
 .venv/bin/python test_phase3.py
 .venv/bin/python test_phase4.py
+.venv/bin/python test_phase5.py
 
 # Optional: Run live Gemini API integration tests
 RUN_LIVE_GEMINI=1 .venv/bin/python test_phase2.py

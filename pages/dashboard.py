@@ -3,7 +3,7 @@ Support Intelligence Dashboard for SupportFlow AI.
 
 Provides real-time operational metrics, AI triage distributions,
 department workload allocations, urgent escalation tracking,
-and on-demand executive briefings via Google Gemini.
+human agent resolution activity, and on-demand executive briefings via Google Gemini.
 Polished for enterprise SaaS aesthetics with compact cards and balanced spacing.
 """
 
@@ -131,9 +131,9 @@ def render_sentiment_chart(df: pd.DataFrame):
 
 
 def render_dashboard():
-    # 1. Top Header
+    # 1. Top Header with Clean Inline Status Badge
     st.title("Support Intelligence")
-    st.caption("AI-powered operational analytics and workload triage for your support workflow")
+    st.caption("AI-powered operational analytics and human-in-the-loop workflow metrics for your support operations")
 
     st.markdown(
         """
@@ -152,8 +152,8 @@ def render_dashboard():
     data = get_dashboard_analytics()
     kpis = data["kpis"]
 
-    # 2. KPI Ribbon (5 Compact Information-Dense Cards in One Row)
-    kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5, gap="small")
+    # 2. KPI Ribbon (6 Compact Information-Dense Cards in One Row)
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5, kpi_col6 = st.columns(6, gap="small")
 
     with kpi_col1:
         st.markdown(
@@ -171,9 +171,9 @@ def render_dashboard():
         st.markdown(
             f"""
             <div class="sf-kpi-card">
-                <div class="sf-kpi-label">Pending Triage</div>
-                <div class="sf-kpi-val">{kpis['new_tickets']}</div>
-                <div class="sf-kpi-sub">Status: New</div>
+                <div class="sf-kpi-label">Open Tickets</div>
+                <div class="sf-kpi-val">{kpis['open_tickets']}</div>
+                <div class="sf-kpi-sub">Active Backlog</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -185,7 +185,7 @@ def render_dashboard():
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">AI Analyzed</div>
                 <div class="sf-kpi-val">{kpis['analyzed_tickets']}</div>
-                <div class="sf-kpi-sub">{kpis['triage_coverage_pct']}% Coverage</div>
+                <div class="sf-kpi-sub">Triage Ready</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -207,9 +207,21 @@ def render_dashboard():
         st.markdown(
             f"""
             <div class="sf-kpi-card">
-                <div class="sf-kpi-label">Grounded Responses</div>
-                <div class="sf-kpi-val">{kpis['rag_coverage_pct']}%</div>
-                <div class="sf-kpi-sub">{kpis['rag_responses']} Drafts Ready</div>
+                <div class="sf-kpi-label">Resolved Tickets</div>
+                <div class="sf-kpi-val" style="color: {'#34d399' if kpis['resolved_tickets'] > 0 else '#f8fafc'};">{kpis['resolved_tickets']}</div>
+                <div class="sf-kpi-sub">Closed by Agents</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with kpi_col6:
+        st.markdown(
+            f"""
+            <div class="sf-kpi-card">
+                <div class="sf-kpi-label">Resolution Rate</div>
+                <div class="sf-kpi-val">{kpis['resolution_rate_pct']}%</div>
+                <div class="sf-kpi-sub">Resolution Coverage</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -257,7 +269,7 @@ def render_dashboard():
             st.markdown("<div style='font-size: 0.82rem; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;'>Urgent Attention Queue (High / Critical)</div>", unsafe_allow_html=True)
             urgent = data["urgent_tickets"]
             if not urgent:
-                st.markdown("<div style='color: #64748b; font-size: 0.82rem; padding: 28px 0; text-align: center;'>No urgent issues detected. All analyzed tickets are routine priority.</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color: #64748b; font-size: 0.82rem; padding: 32px 0; text-align: center;'>No urgent issues detected. All analyzed tickets are routine priority.</div>", unsafe_allow_html=True)
             else:
                 urgent_rows = []
                 for u in urgent:
@@ -284,33 +296,63 @@ def render_dashboard():
 
     with table_col2:
         with st.container(border=True):
-            st.markdown("<div style='font-size: 0.82rem; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;'>Recent Ticket Activity</div>", unsafe_allow_html=True)
-            recent = data["recent_activity"]
-            if not recent:
-                st.markdown("<div style='color: #64748b; font-size: 0.82rem; padding: 28px 0; text-align: center;'>No tickets recorded in the database yet.</div>", unsafe_allow_html=True)
-            else:
-                recent_rows = []
-                for r in recent:
-                    recent_rows.append({
-                        "ID": f"#{r['id']}",
-                        "Customer": r["customer_name"],
-                        "Category": r.get("category", "Pending"),
-                        "Submitted": r["created_at"],
-                        "Status": r["status"],
-                    })
-                st.dataframe(
-                    pd.DataFrame(recent_rows),
-                    hide_index=True,
-                    use_container_width=True,
-                    height=160,
-                    column_config={
-                        "ID": st.column_config.TextColumn("ID", width=45),
-                        "Customer": st.column_config.TextColumn("Customer", width=110),
-                        "Category": st.column_config.TextColumn("Category", width=130),
-                        "Submitted": st.column_config.TextColumn("Submitted", width=135),
-                        "Status": st.column_config.TextColumn("Status", width=80),
-                    }
-                )
+            tab_recent, tab_resolutions = st.tabs(["Recent Activity", "Recent Resolutions"])
+            
+            with tab_recent:
+                recent = data["recent_activity"]
+                if not recent:
+                    st.markdown("<div style='color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center;'>No tickets recorded in the database yet.</div>", unsafe_allow_html=True)
+                else:
+                    recent_rows = []
+                    for r in recent:
+                        recent_rows.append({
+                            "ID": f"#{r['id']}",
+                            "Customer": r["customer_name"],
+                            "Category": r.get("category", "Pending"),
+                            "Submitted": r["created_at"],
+                            "Status": r["status"],
+                        })
+                    st.dataframe(
+                        pd.DataFrame(recent_rows),
+                        hide_index=True,
+                        use_container_width=True,
+                        height=140,
+                        column_config={
+                            "ID": st.column_config.TextColumn("ID", width=45),
+                            "Customer": st.column_config.TextColumn("Customer", width=110),
+                            "Category": st.column_config.TextColumn("Category", width=130),
+                            "Submitted": st.column_config.TextColumn("Submitted", width=135),
+                            "Status": st.column_config.TextColumn("Status", width=80),
+                        }
+                    )
+
+            with tab_resolutions:
+                resolutions = data.get("recent_resolutions", [])
+                if not resolutions:
+                    st.markdown("<div style='color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center;'>No tickets marked as Resolved yet.</div>", unsafe_allow_html=True)
+                else:
+                    res_rows = []
+                    for res in resolutions:
+                        res_rows.append({
+                            "ID": f"#{res['id']}",
+                            "Customer": res["customer_name"],
+                            "Category": res.get("category", "General"),
+                            "Resolved At": res.get("resolved_at", "Completed"),
+                            "Status": res["status"],
+                        })
+                    st.dataframe(
+                        pd.DataFrame(res_rows),
+                        hide_index=True,
+                        use_container_width=True,
+                        height=140,
+                        column_config={
+                            "ID": st.column_config.TextColumn("ID", width=45),
+                            "Customer": st.column_config.TextColumn("Customer", width=110),
+                            "Category": st.column_config.TextColumn("Category", width=130),
+                            "Resolved At": st.column_config.TextColumn("Resolved At", width=135),
+                            "Status": st.column_config.TextColumn("Status", width=80),
+                        }
+                    )
 
     st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
 
