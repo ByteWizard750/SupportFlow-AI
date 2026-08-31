@@ -3,6 +3,7 @@ New Ticket Submission Page for SupportFlow AI.
 
 Allows customers / support representatives to submit a new support ticket.
 Validates input fields and persists the record to the SQLite database.
+Layout is centered with balanced equal margins on both left and right sides.
 """
 
 import streamlit as st
@@ -22,11 +23,13 @@ def render_new_ticket_page():
         st.success(st.session_state["ticket_created_success"])
         st.session_state["ticket_created_success"] = None
 
-    col_form, _ = st.columns([2, 1])
+    # Centered layout with equal margins on both left and right sides
+    _, col_form, _ = st.columns([1, 3, 1])
+
     with col_form:
         with st.container(border=True):
             with st.form("new_ticket_form", clear_on_submit=True):
-                st.subheader("Ticket Details")
+                st.markdown("<h4 style='margin: 0 0 12px 0;'>Ticket Details</h4>", unsafe_allow_html=True)
 
                 customer_name = st.text_input(
                     "Customer Name *",
@@ -47,7 +50,7 @@ def render_new_ticket_page():
                     help="Detailed description of the customer request."
                 )
 
-                st.divider()
+                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("Submit Ticket", type="primary", use_container_width=True)
 
                 if submitted:

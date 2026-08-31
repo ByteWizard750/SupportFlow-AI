@@ -2,7 +2,7 @@
 Tickets Queue and Detail Inspector for SupportFlow AI.
 
 Full-width stacked cockpit layout:
-- Top Section: Search, Status Filter, Ticket Selector & Overview Queue Table
+- Top Section: Clean Header with Stats, Search, Status Filter, Ticket Selector & Overview Queue Table
 - Bottom Section: Ticket Details, AI Triage Intelligence & Grounded Resolution Inspector
 """
 
@@ -71,25 +71,24 @@ def render_tickets_page():
     tickets = get_all_tickets()
     analyzed_count = sum(1 for t in tickets if t["status"] == "AI Analyzed") if tickets else 0
 
-    # Top Header Row with Resilient Stats Badges
-    hdr_left, hdr_right = st.columns([2.8, 1.2])
-    with hdr_left:
-        st.title("Ticket Queue")
-        st.caption("Inspect, triage, and resolve customer support tickets with AI intelligence and grounded knowledge base suggestions")
-    with hdr_right:
-        st.markdown(
-            f"""
-            <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%; padding-top: 14px; gap: 8px; flex-wrap: wrap;">
-                <span style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; color: #94a3b8;">
-                    Total: <b style="color: #f1f5f9;">{len(tickets)}</b>
-                </span>
-                <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; color: #4ade80;">
-                    Analyzed: <b>{analyzed_count}</b>
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # Non-colliding Top Header Row
+    st.title("Ticket Queue")
+    st.caption("Inspect, triage, and resolve customer support tickets with AI intelligence and grounded knowledge base suggestions")
+
+    # Clean Inline Counter Badges (Safe from Streamlit top menu collision)
+    st.markdown(
+        f"""
+        <div style="display: flex; gap: 8px; margin-top: 4px; margin-bottom: 8px;">
+            <span style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #94a3b8;">
+                Total Tickets: <b style="color: #f1f5f9;">{len(tickets)}</b>
+            </span>
+            <span style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; color: #4ade80;">
+                AI Analyzed: <b>{analyzed_count}</b>
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.divider()
 
@@ -98,7 +97,7 @@ def render_tickets_page():
         return
 
     # ==================== TOP SECTION: TICKET QUEUE OVERVIEW ====================
-    # Search, Filter & Ticket Selector Toolbar in one row
+    # Search, Filter & Ticket Selector Toolbar
     t_search_col, t_filter_col, t_select_col = st.columns([1.5, 1, 2], gap="medium")
 
     with t_search_col:
@@ -300,7 +299,7 @@ def render_tickets_page():
                         st.markdown(f"**Chunk {i}: {c.get('doc_title')} — {c.get('section')}** (Similarity: `{c.get('similarity_score')}`)")
                         st.info(c.get("text", ""))
 
-            st.markdown(f"<div style='font-size: 0.75rem; color: #64748b; margin-top: 6px;'>Drafted at: {suggested_res.get('created_at', '')}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size: 0.72rem; color: #64748b; margin-top: 6px;'>Drafted at: {suggested_res.get('created_at', '')}</div>", unsafe_allow_html=True)
 
         else:
             st.markdown("<div style='height: 0.2rem;'></div>", unsafe_allow_html=True)

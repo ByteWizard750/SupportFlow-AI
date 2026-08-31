@@ -16,28 +16,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Enterprise CSS for Crisp Alignment & Efficient Space Utilization
+# Custom Enterprise CSS for Balanced Margins & Zero Top Collision
 st.markdown(
     """
     <style>
-    /* Full-width responsive workspace with clean padding */
+    /* Centered responsive container with equal left & right margins */
     .block-container {
-        padding-top: 1.25rem;
-        padding-bottom: 2rem;
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
         padding-left: 2rem;
         padding-right: 2rem;
-        max-width: 100%;
+        max-width: 1280px;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     /* Clean divider baseline */
     hr {
         margin: 0.6rem 0 1rem 0;
         border-color: rgba(255, 255, 255, 0.08);
-    }
-    
-    /* Reduce unnecessary vertical padding in containers */
-    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-        padding: 0;
     }
     
     /* Harmonize expander styling */
