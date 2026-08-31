@@ -153,6 +153,13 @@ def render_dashboard():
     kpis = data["kpis"]
 
     # 2. KPI Ribbon (6 Compact Information-Dense Cards in One Row)
+    total_val = kpis.get("total_tickets", 0)
+    resolved_val = kpis.get("resolved_tickets", 0)
+    open_val = kpis.get("open_tickets", max(0, total_val - resolved_val))
+    analyzed_val = kpis.get("analyzed_tickets", 0)
+    urgent_val = kpis.get("urgent_tickets", 0)
+    res_rate_val = kpis.get("resolution_rate_pct", round(resolved_val / total_val * 100.0, 1) if total_val > 0 else 0.0)
+
     kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5, kpi_col6 = st.columns(6, gap="small")
 
     with kpi_col1:
@@ -160,7 +167,7 @@ def render_dashboard():
             f"""
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">Total Tickets</div>
-                <div class="sf-kpi-val">{kpis['total_tickets']}</div>
+                <div class="sf-kpi-val">{total_val}</div>
                 <div class="sf-kpi-sub">All-time Volume</div>
             </div>
             """,
@@ -172,7 +179,7 @@ def render_dashboard():
             f"""
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">Open Tickets</div>
-                <div class="sf-kpi-val">{kpis['open_tickets']}</div>
+                <div class="sf-kpi-val">{open_val}</div>
                 <div class="sf-kpi-sub">Active Backlog</div>
             </div>
             """,
@@ -184,7 +191,7 @@ def render_dashboard():
             f"""
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">AI Analyzed</div>
-                <div class="sf-kpi-val">{kpis['analyzed_tickets']}</div>
+                <div class="sf-kpi-val">{analyzed_val}</div>
                 <div class="sf-kpi-sub">Triage Ready</div>
             </div>
             """,
@@ -196,7 +203,7 @@ def render_dashboard():
             f"""
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">Urgent Attention</div>
-                <div class="sf-kpi-val" style="color: {'#fb923c' if kpis['urgent_tickets'] > 0 else '#f8fafc'};">{kpis['urgent_tickets']}</div>
+                <div class="sf-kpi-val" style="color: {'#fb923c' if urgent_val > 0 else '#f8fafc'};">{urgent_val}</div>
                 <div class="sf-kpi-sub">High & Critical</div>
             </div>
             """,
@@ -208,7 +215,7 @@ def render_dashboard():
             f"""
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">Resolved Tickets</div>
-                <div class="sf-kpi-val" style="color: {'#34d399' if kpis['resolved_tickets'] > 0 else '#f8fafc'};">{kpis['resolved_tickets']}</div>
+                <div class="sf-kpi-val" style="color: {'#34d399' if resolved_val > 0 else '#f8fafc'};">{resolved_val}</div>
                 <div class="sf-kpi-sub">Closed by Agents</div>
             </div>
             """,
@@ -220,7 +227,7 @@ def render_dashboard():
             f"""
             <div class="sf-kpi-card">
                 <div class="sf-kpi-label">Resolution Rate</div>
-                <div class="sf-kpi-val">{kpis['resolution_rate_pct']}%</div>
+                <div class="sf-kpi-val">{res_rate_val}%</div>
                 <div class="sf-kpi-sub">Resolution Coverage</div>
             </div>
             """,
