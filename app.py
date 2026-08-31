@@ -7,7 +7,7 @@ database initialization, and knowledge base vector index preparation.
 
 import streamlit as st
 from database.database import init_db
-from services.rag_service import build_vector_index
+from services.rag_service import build_vector_index, get_embedding_model
 
 # Page Configuration
 st.set_page_config(
@@ -50,8 +50,9 @@ st.markdown(
 # Initialize Database Schema
 init_db()
 
-# Prepare Knowledge Base Index
+# Pre-warm Embedding Model & Prepare Knowledge Base Index on Startup
 try:
+    get_embedding_model()
     build_vector_index()
 except Exception as e:
     print(f"[WARN] Vector index auto-build deferred: {e}")

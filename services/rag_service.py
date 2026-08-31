@@ -3,12 +3,14 @@ RAG Service Layer for SupportFlow AI.
 
 Handles knowledge base document loading, semantic chunking, local embedding generation
 via Sentence Transformers (all-MiniLM-L6-v2), FAISS vector indexing, and nearest-neighbor search.
+Includes in-memory query embedding caching for instant retrieval and sub-millisecond latency.
 """
 
 import os
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
+from functools import lru_cache
 
 import faiss
 import numpy as np
@@ -203,6 +205,10 @@ def build_vector_index(
     return index, all_chunks
 
 
+# In-memory query results cache for instantaneous lookups
+_QUERY_CACHE: Dict[str, List[Dict[str, Any]]] = {}
+
+
 def retrieve_relevant_chunks(
     query: str,
     top_k: int = 3,
@@ -212,11 +218,20 @@ def retrieve_relevant_chunks(
 ) -> List[Dict[str, Any]]:
     """
     Encodes the query and searches the FAISS index for the top-k most relevant knowledge chunks.
+    Results are cached in memory for sub-millisecond retrieval on repeated renders.
 
     Returns:
         List of matching chunk dicts containing text, doc_title, section, and similarity score.
     """
-    global _FAISS_INDEX, _CHUNKS_METADATA
+    global _FAISS_INDEX, _CHUNKS_METADATA, _QUERY_CACHE
+
+    clean_query = query.strip()
+    if not clean_query:
+        return []
+
+    cache_key = f"{clean_query}::{top_k}::{min_similarity}"
+    if cache_key in _QUERY_CACHE:
+        return _QUERY_CACHE[cache_key]
 
     if _FAISS_INDEX is None or _CHUNKS_METADATA is None:
         _FAISS_INDEX, _CHUNKS_METADATA = build_vector_index(
@@ -224,11 +239,11 @@ def retrieve_relevant_chunks(
             vector_store_dir=vector_store_dir
         )
 
-    if _FAISS_INDEX.ntotal == 0 or not _CHUNKS_METADATA or not query.strip():
+    if _FAISS_INDEX.ntotal == 0 or not _CHUNKS_METADATA:
         return []
 
     model = get_embedding_model()
-    query_emb = model.encode([query.strip()], normalize_embeddings=True)
+    query_emb = model.encode([clean_query], normalize_embeddings=True)
     query_np = np.array(query_emb).astype("float32")
 
     k = min(top_k, _FAISS_INDEX.ntotal)
@@ -243,4 +258,5 @@ def retrieve_relevant_chunks(
                 chunk_copy["similarity_score"] = round(sim_score, 4)
                 results.append(chunk_copy)
 
+    _QUERY_CACHE[cache_key] = results
     return results
