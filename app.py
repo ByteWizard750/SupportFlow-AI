@@ -16,33 +16,34 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Enterprise CSS for Crisp Alignment & Modern Proportions
+# Custom Enterprise CSS for Crisp Alignment & Efficient Space Utilization
 st.markdown(
     """
     <style>
-    /* Clean container padding and font baseline */
+    /* Full-width responsive workspace with clean padding */
     .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 2.5rem;
-        max-width: 1300px;
+        padding-top: 1.25rem;
+        padding-bottom: 2rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        max-width: 100%;
     }
     
-    /* Harmonize tabs styling */
-    div[data-testid="stTabs"] button {
-        font-weight: 600;
-        font-size: 0.9rem;
-        padding: 0.5rem 1rem;
-    }
-    
-    /* Ensure disabled text areas are clean and easily readable */
-    div[data-baseweb="textarea"] textarea:disabled {
-        opacity: 0.92 !important;
-        -webkit-text-fill-color: inherit !important;
-    }
-    
-    /* Streamlit divider alignment */
+    /* Clean divider baseline */
     hr {
-        margin: 0.75rem 0 1.25rem 0;
+        margin: 0.6rem 0 1rem 0;
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    
+    /* Reduce unnecessary vertical padding in containers */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0;
+    }
+    
+    /* Harmonize expander styling */
+    .streamlit-expanderHeader {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
     }
     </style>
     """,
